@@ -1,10 +1,10 @@
 <div class="space-y-6">
-    <h1 class="text-2xl font-semibold tracking-tight">Programmes</h1>
-    <form wire:submit="create" class="flex gap-2 rounded-xl border border-gray-200 bg-white p-4">
-        <input wire:model="name" placeholder="New programme name" class="flex-1 rounded-lg border-gray-300 text-sm">
-        <button class="rounded-lg bg-eamn-700 px-4 py-2 text-sm font-semibold text-white">Create</button>
+    <h1 class="h1">Programmes</h1>
+    <form wire:submit="create" class="card flex gap-3 p-4">
+        <input wire:model="name" placeholder="New programme name" class="input flex-1" aria-label="New programme name">
+        <button class="btn-primary">Create</button>
     </form>
-    <div class="divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white">
+    <div class="divide-y divide-gray-200 card">
         @foreach ($programmes as $p)
             <div class="flex items-center justify-between px-5 py-4">
                 <div>

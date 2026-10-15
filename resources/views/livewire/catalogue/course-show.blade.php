@@ -9,7 +9,7 @@
 
     @if ($course->learning_outcomes)
         <section>
-            <h2 class="text-lg font-semibold">What you'll learn</h2>
+            <h2 class="h2">What you'll learn</h2>
             <ul class="mt-2 list-inside list-disc space-y-1 text-gray-700">
                 @foreach ($course->learning_outcomes as $outcome)
                     <li>{{ $outcome }}</li>
@@ -20,8 +20,8 @@
 
     @if ($modules->isNotEmpty())
         <section>
-            <h2 class="text-lg font-semibold">Curriculum</h2>
-            <div class="mt-3 divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white">
+            <h2 class="h2">Curriculum</h2>
+            <div class="mt-3 divide-y divide-gray-200 card">
                 @foreach ($modules as $module)
                     <div class="p-4">
                         <h3 class="font-medium">{{ $module->title }}</h3>
@@ -37,10 +37,10 @@
     @endif
 
     <section>
-        <h2 class="text-lg font-semibold">Enrolment options</h2>
+        <h2 class="h2">Enrolment options</h2>
         <div class="mt-3 grid gap-4 sm:grid-cols-2">
             @foreach ($variants as $variant)
-                <div class="rounded-xl border border-gray-200 bg-white p-5">
+                <div class="card-pad">
                     <p class="font-medium">{{ $variant->name }}</p>
                     <p class="text-sm text-gray-500">{{ ucfirst($variant->delivery_type) }}</p>
                     <p class="mt-3 text-2xl font-semibold">{{ $variant->priceFormatted() }}</p>

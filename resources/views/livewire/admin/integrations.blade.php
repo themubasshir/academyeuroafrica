@@ -1,15 +1,15 @@
 <div class="space-y-6">
-    <h1 class="text-2xl font-semibold tracking-tight">Integrations</h1>
+    <h1 class="h1">Integrations</h1>
 
     <div class="grid gap-4 sm:grid-cols-2">
-        <div class="rounded-xl border border-gray-200 bg-white p-5">
+        <div class="card-pad">
             <h2 class="font-semibold">Joomla bridge</h2>
             <p class="mt-1 text-sm {{ $joomlaConfigured ? 'text-green-600' : 'text-amber-600' }}">
                 {{ $joomlaConfigured ? 'Configured' : 'Missing JOOMLA_BRIDGE_SECRET' }}
             </p>
             <p class="text-xs text-gray-500">{{ config('services.joomla.base_url') }}</p>
         </div>
-        <div class="rounded-xl border border-gray-200 bg-white p-5">
+        <div class="card-pad">
             <h2 class="font-semibold">Payments</h2>
             <p class="mt-1 text-sm {{ $paypalConfigured ? 'text-green-600' : 'text-amber-600' }}">
                 {{ $paypalConfigured ? 'PayPal configured' : 'PayPal not configured' }} · {{ $paypalMode }} · default: {{ $gateway }}
@@ -17,7 +17,7 @@
         </div>
     </div>
 
-    <section class="rounded-xl border border-gray-200 bg-white p-5">
+    <section class="card-pad">
         <h2 class="font-semibold">Joomla page → product map</h2>
         <table class="mt-3 w-full text-sm">
             <thead class="text-left text-xs text-gray-500"><tr><th class="pb-2">Joomla path</th><th class="pb-2">Programme</th><th class="pb-2">Variant</th></tr></thead>

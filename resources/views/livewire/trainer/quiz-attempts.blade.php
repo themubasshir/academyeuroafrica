@@ -1,10 +1,10 @@
 <div class="mx-auto max-w-4xl space-y-6">
     <a href="{{ route('trainer.quizzes', $quiz->course) }}" class="text-sm text-eamn-700 hover:underline">&larr; Quizzes</a>
-    <h1 class="text-2xl font-semibold tracking-tight">{{ $quiz->title }} — attempts</h1>
+    <h1 class="h1">{{ $quiz->title }} — attempts</h1>
 
     <div class="space-y-4">
         @forelse ($attempts as $attempt)
-            <div class="rounded-xl border border-gray-200 bg-white p-5">
+            <div class="card-pad">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="font-medium">{{ $attempt->user->name }}</p>
@@ -31,12 +31,12 @@
                             </div>
                         @endforeach
                         <button wire:click="finalise({{ $attempt->id }})"
-                                class="rounded-lg bg-eamn-700 px-4 py-1.5 text-sm font-semibold text-white">Finalise grade</button>
+                                class="btn-primary btn-sm">Finalise grade</button>
                     </div>
                 @endif
             </div>
         @empty
-            <p class="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">No attempts yet.</p>
+            <p class="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">No attempts yet.</p>
         @endforelse
     </div>
 </div>

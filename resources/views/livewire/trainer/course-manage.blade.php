@@ -1,7 +1,7 @@
 <div class="mx-auto max-w-5xl space-y-8">
     <div>
         <a href="{{ route('trainer.dashboard') }}" class="text-sm text-eamn-700 hover:underline">&larr; Dashboard</a>
-        <h1 class="mt-2 text-2xl font-semibold tracking-tight">{{ $course->title }}</h1>
+        <h1 class="mt-2 h1">{{ $course->title }}</h1>
         <p class="text-sm text-gray-500">{{ ucfirst($course->status) }} · {{ $course->programme->name }}</p>
     </div>
 
@@ -9,13 +9,13 @@
 
     <div class="grid gap-8 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
-            <section class="rounded-xl border border-gray-200 bg-white p-5">
+            <section class="card-pad">
                 <div class="flex items-center justify-between">
                     <h2 class="font-semibold">Modules & lessons</h2>
                     <form wire:submit="saveModule" class="flex gap-2">
                         <input wire:model="moduleTitle" placeholder="New module title"
-                               class="rounded-lg border-gray-300 text-sm">
-                        <button class="rounded-lg bg-eamn-700 px-3 py-1.5 text-sm font-semibold text-white">+ Module</button>
+                               class="input">
+                        <button class="btn-primary btn-sm">+ Module</button>
                     </form>
                 </div>
 
@@ -53,17 +53,17 @@
                 <section class="rounded-xl border border-eamn-200 bg-eamn-50 p-5">
                     <h3 class="font-semibold">{{ $editingLessonId ? 'Edit lesson' : 'New lesson' }}</h3>
                     <div class="mt-3 space-y-3">
-                        <input wire:model="lessonTitle" placeholder="Lesson title" class="block w-full rounded-lg border-gray-300 text-sm">
-                        <select wire:model.live="lessonType" class="block w-full rounded-lg border-gray-300 text-sm">
+                        <input wire:model="lessonTitle" placeholder="Lesson title" class="block w-full input">
+                        <select wire:model.live="lessonType" class="block w-full input">
                             <option value="text">Text</option>
                             <option value="video">Video</option>
                         </select>
                         @if ($lessonType === 'video')
-                            <input wire:model="videoId" placeholder="Video ID (YouTube/Vimeo/embed URL)" class="block w-full rounded-lg border-gray-300 text-sm">
+                            <input wire:model="videoId" placeholder="Video ID (YouTube/Vimeo/embed URL)" class="block w-full input">
                         @endif
-                        <textarea wire:model="lessonContent" rows="4" placeholder="Content" class="block w-full rounded-lg border-gray-300 text-sm"></textarea>
+                        <textarea wire:model="lessonContent" rows="4" placeholder="Content" class="block w-full input"></textarea>
                         <div class="flex gap-2">
-                            <button wire:click="saveLesson" class="rounded-lg bg-eamn-700 px-4 py-2 text-sm font-semibold text-white">Save lesson</button>
+                            <button wire:click="saveLesson" class="btn-primary">Save lesson</button>
                             <button wire:click="$set('attachModuleId', null)" class="rounded-lg px-4 py-2 text-sm text-gray-600">Cancel</button>
                         </div>
                     </div>
@@ -71,16 +71,16 @@
             @endif
         </div>
 
-        <section class="rounded-xl border border-gray-200 bg-white p-5">
+        <section class="card-pad">
             <h2 class="font-semibold">Materials</h2>
             <form wire:submit="uploadMaterial" class="mt-3 space-y-3">
-                <select wire:model="attachModuleId" class="block w-full rounded-lg border-gray-300 text-sm">
+                <select wire:model="attachModuleId" class="block w-full input">
                     <option value="">Whole course</option>
                     @foreach ($modules as $m)<option value="{{ $m->id }}">Module: {{ $m->title }}</option>@endforeach
                 </select>
                 <input type="file" wire:model="materialUpload" class="block w-full text-sm">
                 @error('materialUpload')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
-                <button class="rounded-lg bg-eamn-700 px-4 py-2 text-sm font-semibold text-white">Upload</button>
+                <button class="btn-primary">Upload</button>
             </form>
             <ul class="mt-4 space-y-1 text-sm">
                 @foreach ($materials as $m)

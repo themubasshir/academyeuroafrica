@@ -135,6 +135,26 @@ class RenderSmokeTest extends TestCase
         }
     }
 
+    // ---------- public catalogue ----------
+
+    public function test_guest_can_view_published_course(): void
+    {
+        $this->course->update(['status' => 'published']);
+        $this->get(route('course.show', $this->course))->assertOk();
+    }
+
+    public function test_guest_cannot_view_draft_course(): void
+    {
+        $this->course->update(['status' => 'draft']);
+        $this->get(route('course.show', $this->course))->assertForbidden();
+    }
+
+    public function test_home_lists_published_programmes(): void
+    {
+        \App\Models\Programme::create(['name' => 'Public Prog', 'slug' => 'public-prog', 'status' => 'published']);
+        $this->get(route('home'))->assertOk()->assertSee('Public Prog');
+    }
+
     // ---------- role boundaries ----------
 
     public function test_student_cannot_reach_trainer_area(): void

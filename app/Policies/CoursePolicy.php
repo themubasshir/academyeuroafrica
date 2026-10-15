@@ -8,10 +8,14 @@ use App\Models\User;
 
 class CoursePolicy
 {
-    public function view(User $user, Course $course): bool
+    public function view(?User $user, Course $course): bool
     {
         if ($course->isPublished()) {
             return true;
+        }
+
+        if (! $user) {
+            return false;
         }
 
         // Unpublished courses visible only to assigned trainers and admins.

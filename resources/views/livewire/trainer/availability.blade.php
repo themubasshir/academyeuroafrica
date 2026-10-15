@@ -1,28 +1,26 @@
 <div class="mx-auto max-w-2xl space-y-6">
     <a href="{{ route('trainer.dashboard') }}" class="text-sm text-eamn-700 hover:underline">&larr; Dashboard</a>
-    <h1 class="text-2xl font-semibold tracking-tight">My availability</h1>
+    <h1 class="h1">My availability</h1>
     <p class="text-sm text-gray-500">Times shown in {{ auth()->user()->timezone ?? 'UTC' }}.</p>
 
-    @if (session('saved'))<div class="rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">{{ session('saved') }}</div>@endif
-
-    <form wire:submit="add" class="grid gap-4 rounded-xl border border-gray-200 bg-white p-5 sm:grid-cols-4">
-        <input type="date" wire:model="date" class="rounded-lg border-gray-300 text-sm">
-        <input type="time" wire:model="startTime" class="rounded-lg border-gray-300 text-sm">
-        <input type="time" wire:model="endTime" class="rounded-lg border-gray-300 text-sm">
-        <button class="rounded-lg bg-eamn-700 px-4 py-2 text-sm font-semibold text-white">Add block</button>
+    <form wire:submit="add" class="card-pad grid gap-4 sm:grid-cols-4">
+        <div><label for="d" class="label">Date</label><input id="d" type="date" wire:model="date" class="input mt-1"></div>
+        <div><label for="st" class="label">Start</label><input id="st" type="time" wire:model="startTime" class="input mt-1"></div>
+        <div><label for="et" class="label">End</label><input id="et" type="time" wire:model="endTime" class="input mt-1"></div>
+        <div class="flex items-end"><button class="btn-primary w-full">Add block</button></div>
     </form>
 
     <div class="space-y-2">
         @forelse ($slots as $slot)
-            <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
+            <div class="flex items-center justify-between card p-4">
                 <p class="text-sm">
                     {{ $slot->starts_at->setTimezone($slot->timezone)->format('D, M j · g:i A') }}
                     — {{ $slot->ends_at->setTimezone($slot->timezone)->format('g:i A T') }}
                 </p>
-                <button wire:click="remove({{ $slot->id }})" class="text-sm text-red-600">Remove</button>
+                <button wire:click="remove({{ $slot->id }})" wire:confirm="Remove this availability block?" class="text-sm font-medium text-red-600 hover:underline">Remove</button>
             </div>
         @empty
-            <p class="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-500">No upcoming availability.</p>
+            <x-ui.empty title="No upcoming availability" />
         @endforelse
     </div>
 </div>

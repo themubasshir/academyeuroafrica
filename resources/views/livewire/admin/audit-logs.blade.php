@@ -1,6 +1,6 @@
 <div class="space-y-6">
-    <h1 class="text-2xl font-semibold tracking-tight">Audit logs</h1>
-    <div class="divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white font-mono text-xs">
+    <h1 class="h1">Audit logs</h1>
+    <div class="divide-y divide-gray-200 card font-mono text-xs">
         @forelse ($logs as $log)
             <div class="px-5 py-2.5">
                 <span class="text-gray-400">{{ $log->created_at->toIso8601String() }}</span>
