@@ -199,6 +199,17 @@ class DemoSeeder extends Seeder
             'student_id' => $student->id,
         ]);
 
+        // Certification policy on the Radio course ---------------------------
+        \App\Models\CertificationPolicy::firstOrCreate(['course_id' => $radio->id], [
+            'enabled' => true,
+            'require_lessons' => true,
+            'require_quizzes' => true,
+            'require_assignments' => false,
+            'auto_issue' => true,
+            'signatory_name' => 'Academic Board',
+            'signatory_title' => 'EuroAfrica Media Academy',
+        ]);
+
         // Trainer assignment + availability --------------------------------
         TrainerAssignment::firstOrCreate(['trainer_id' => $trainer->id, 'course_id' => $radio->id]);
         TrainerAssignment::firstOrCreate(['trainer_id' => $trainer->id, 'course_id' => $tv->id]);

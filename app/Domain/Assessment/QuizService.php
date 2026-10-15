@@ -2,6 +2,7 @@
 
 namespace App\Domain\Assessment;
 
+use App\Domain\Certification\CertificateTrigger;
 use App\Models\Enrolment;
 use App\Models\Quiz;
 use App\Models\QuizAnswer;
@@ -86,6 +87,18 @@ class QuizService
                 'score' => $needsManual ? null : $total,
                 'status' => $needsManual ? 'submitted' : 'graded',
             ]);
+
+            // Auto-graded → may unlock certification. Find the student's
+            // enrolment on this course and re-check eligibility.
+            if (! $needsManual) {
+                $enrolment = Enrolment::where('user_id', $attempt->user_id)
+                    ->where('status', 'active')
+                    ->whereHas('variant', fn ($q) => $q->where('course_id', $attempt->quiz->course_id))
+                    ->first();
+                if ($enrolment) {
+                    CertificateTrigger::for($enrolment);
+                }
+            }
 
             return $attempt->fresh();
         });

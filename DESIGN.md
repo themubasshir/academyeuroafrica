@@ -133,6 +133,8 @@ The palette pairs institutional navy with ivory paper; registry blue carries all
 
 **Character:** Engraved serif titles over a quiet grotesque; the pairing reads institutional, not editorial-fashion.
 
+**Print/PDF exception.** DomPDF cannot load the web fonts and has no fontconfig fallback on shared hosts — certificate PDFs embed **DejaVu Serif** (display: italic name, bold title) + **DejaVu Sans** (labels, rules, folio). Same engraved-serif-over-sans register, different faces, confined to `resources/views/certificates/pdf.blade.php`.
+
 ### Hierarchy
 - **Display** (semibold, `text-2xl`→`1.75rem`, tight): page titles — "Welcome back to the register."
 - **Headline** (semibold, `text-lg`): card and section titles.

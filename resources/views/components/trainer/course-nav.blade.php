@@ -7,6 +7,7 @@
         'assignments' => ['Assignments', 'trainer.assignments'],
         'quizzes'     => ['Quizzes',     'trainer.quizzes'],
         'students'    => ['Students',    'trainer.students'],
+        'certifications' => ['Certifications', 'trainer.certifications'],
     ];
 @endphp
 <nav class="flex flex-wrap items-center gap-1 border-b border-paper-300" aria-label="Manage course">

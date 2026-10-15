@@ -2,8 +2,10 @@
 
 namespace App\Livewire\Trainer;
 
+use App\Domain\Certification\CertificateTrigger;
 use App\Models\Assignment;
 use App\Models\AssignmentGrade;
+use App\Models\Enrolment;
 use Livewire\Component;
 
 class Grading extends Component
@@ -37,6 +39,13 @@ class Grading extends Component
             ]
         );
         $submission->update(['status' => 'graded']);
+        $enrolment = Enrolment::where('user_id', $submission->user_id)
+            ->where('status', 'active')
+            ->whereHas('variant', fn ($q) => $q->where('course_id', $this->assignment->course_id))
+            ->first();
+        if ($enrolment) {
+            CertificateTrigger::for($enrolment);
+        }
         session()->flash('saved', 'Grade released.');
     }
 

@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Trainer;
 
+use App\Domain\Certification\CertificateTrigger;
+use App\Models\Enrolment;
 use App\Models\Quiz;
 use App\Models\QuizAnswer;
 use Livewire\Component;
@@ -30,6 +32,14 @@ class QuizAttempts extends Component
             'score' => (int) $attempt->answers()->sum('awarded_points'),
             'status' => 'graded',
         ]);
+
+        $enrolment = Enrolment::where('user_id', $attempt->user_id)
+            ->where('status', 'active')
+            ->whereHas('variant', fn ($q) => $q->where('course_id', $this->quiz->course_id))
+            ->first();
+        if ($enrolment) {
+            CertificateTrigger::for($enrolment);
+        }
     }
 
     public function render()

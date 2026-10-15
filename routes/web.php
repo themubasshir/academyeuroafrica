@@ -4,9 +4,11 @@ use App\Http\Controllers\Auth\BridgeConsumeController;
 use App\Http\Controllers\Auth\BridgeEventsController;
 use App\Http\Controllers\Auth\BridgeStartController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Deploy\MigrateRunnerController;
 use App\Http\Controllers\Files\MaterialController;
+use App\Http\Controllers\VerifyCertificateController;
 use App\Http\Controllers\Webhooks\PaymentWebhookController;
 use App\Models\Order;
 use Illuminate\Http\Request;
@@ -69,6 +71,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::livewire('learn/{enrolment}/quiz/{quiz}', 'student.quiz-take')->name('learn.quiz');
     Route::livewire('my/results', 'student.results')->name('student.results');
     Route::livewire('my/training', 'student.training')->name('student.training');
+    Route::livewire('my/certificates', 'student.certificates')->name('student.certificates');
+    Route::get('my/certificates/{certificate}/download', [CertificateController::class, 'download'])
+        ->name('student.certificates.download');
 
     Route::get('checkout/success', [CheckoutController::class, 'success'])
         ->name('checkout.success');
@@ -99,6 +104,11 @@ Route::post('deploy/migrate', MigrateRunnerController::class)
 // Payment webhooks — no auth, no CSRF, verified per-gateway.
 Route::post('webhooks/{gateway}', PaymentWebhookController::class)
     ->name('webhooks.payment');
+
+// Public certificate verification — no auth, rate-limited, non-sequential ref.
+Route::get('verify/{ref}', [VerifyCertificateController::class, 'show'])
+    ->middleware('throttle:30,1')
+    ->name('certificates.verify');
 
 // Local-only test checkout simulator (never registered in production).
 if (app()->environment(['local', 'testing'])) {
@@ -142,6 +152,8 @@ Route::middleware(['auth', 'active', 'role:trainer,super-admin,academy-admin'])
         Route::livewire('quizzes/{quiz}/edit', 'trainer.quiz-builder')->name('quiz.builder');
         Route::livewire('quizzes/{quiz}/attempts', 'trainer.quiz-attempts')->name('quiz.attempts');
         Route::livewire('courses/{course}/students', 'trainer.students')->name('students');
+        Route::livewire('courses/{course}/certifications', 'trainer.certifications')->name('certifications');
+        Route::livewire('sessions/{session}/attendance', 'trainer.session-attendance')->name('session.attendance');
         Route::livewire('availability', 'trainer.availability')->name('availability');
     });
 
@@ -155,4 +167,7 @@ Route::middleware(['auth', 'active', 'role:super-admin,academy-admin'])
         Route::livewire('enrolments', 'admin.enrolments')->name('enrolments');
         Route::livewire('integrations', 'admin.integrations')->name('integrations');
         Route::livewire('audit-logs', 'admin.audit-logs')->name('audit-logs');
+        Route::livewire('certificates', 'admin.certificates')->name('certificates');
+        Route::livewire('certificates/policy/{course}', 'admin.certificate-policy')->name('certificates.policy');
+        Route::livewire('certificates/audit', 'admin.certificate-audit')->name('certificates.audit');
     });

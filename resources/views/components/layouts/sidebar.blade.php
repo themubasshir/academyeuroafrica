@@ -10,6 +10,7 @@
             ['Enrolments', 'admin.enrolments', 'M9 12l2 2 4-4'],
             ['Orders', 'admin.orders', 'M3 3h18l-1 9H4L3 3z'],
             ['Integrations', 'admin.integrations', 'M13.5 6a3 3 0 11-4.243 4.243M13.5 6L9.257 10.243M13.5 6a3 3 0 104.243 4.243M13.5 6H21'],
+            ['Certificates', 'admin.certificates', 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
             ['Audit logs', 'admin.audit-logs', 'M12 8v4l3 3M5 3v18h14'],
         ],
         $user->isTrainer() => [
@@ -20,6 +21,7 @@
             ['My Courses', 'student.dashboard', 'M3 12l9-9 9 9M5 10v10h14V10'],
             ['My Results', 'student.results', 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10'],
             ['Private Training', 'student.training', 'M16 7a4 4 0 11-8 0 4 4 0 018 0M12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
+            ['My Certificates', 'student.certificates', 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
         ],
     };
     $role = $user->isAdmin() ? 'Administration' : ($user->isTrainer() ? 'Trainer' : 'Student');

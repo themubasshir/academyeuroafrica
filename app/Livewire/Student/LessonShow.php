@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Student;
 
+use App\Domain\Certification\CertificateTrigger;
 use App\Models\Enrolment;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
@@ -40,6 +41,7 @@ class LessonShow extends Component
             ['completed_at' => now()]
         );
         $this->dispatch('lesson-completed');
+        CertificateTrigger::for($this->enrolment);
     }
 
     public function render()

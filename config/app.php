@@ -55,6 +55,13 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+    | Public academy base URL used for certificate verification links and
+    | QR codes. Separate from APP_URL so dev can run on 127.0.0.1:8000 while
+    | QR codes still point at the production verification endpoint.
+    */
+    'academy_url' => env('ACADEMY_URL', env('APP_URL', 'https://academy.euroafricamedia.eu')),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 #[Fillable([
@@ -39,6 +40,30 @@ class Course extends Model
     public function trainerAssignments(): HasMany
     {
         return $this->hasMany(TrainerAssignment::class);
+    }
+
+    /** @return HasManyThrough<Lesson, CourseModule, $this> */
+    public function lessons(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    {
+        return $this->hasManyThrough(Lesson::class, CourseModule::class);
+    }
+
+    /** @return HasMany<Quiz, $this> */
+    public function quizzes(): HasMany
+    {
+        return $this->hasMany(Quiz::class);
+    }
+
+    /** @return HasMany<Assignment, $this> */
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(Assignment::class);
+    }
+
+    /** @return HasOne<CertificationPolicy, $this> */
+    public function certificationPolicy(): HasOne
+    {
+        return $this->hasOne(CertificationPolicy::class);
     }
 
     /** @return HasMany<Group, $this> */
