@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="component" method="upgrade">
+    <name>com_eamnbridge</name>
+    <creationDate>2026-10</creationDate>
+    <author>EuroAfrica Media</author>
+    <authorEmail>dev@euroafricamedia.eu</authorEmail>
+    <version>1.0.0</version>
+    <description>EAMN Academy Bridge — SSO code exchange, purchase mapping and lifecycle events for academy.euroafricamedia.eu.</description>
+
+    <files>
+        <filename component="com_eamnbridge">eamnbridge.php</filename>
+        <folder>src</folder>
+    </files>
+
+    <administration>
+        <files>
+            <folder>admin</folder>
+        </files>
+    </administration>
+
+    <config>
+        <fields name="params">
+            <fieldset name="basic">
+                <field name="academy_base_url" type="url" label="Academy Base URL"
+                       default="https://academy.euroafricamedia.eu" required="true"/>
+                <field name="bridge_secret" type="password" label="Shared HMAC Secret" required="true"/>
+                <field name="client_id" type="text" label="Client ID" default="eamn-academy"/>
+            </fieldset>
+        </fields>
+    </config>
+</extension>

@@ -2,7 +2,14 @@
 
 use App\Http\Controllers\Auth\BridgeConsumeController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\Deploy\MigrateRunnerController;
+use App\Http\Controllers\Webhooks\PaymentWebhookController;
+use App\Models\Order;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
 Route::get('/', fn () => view('welcome'))->name('home');
 
@@ -33,35 +40,40 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::livewire('dashboard', 'student.dashboard')
         ->name('student.dashboard');
 
-    Route::get('checkout/success', [\App\Http\Controllers\CheckoutController::class, 'success'])
+    Route::get('checkout/success', [CheckoutController::class, 'success'])
         ->name('checkout.success');
-    Route::get('checkout/cancelled', [\App\Http\Controllers\CheckoutController::class, 'cancelled'])
+    Route::get('checkout/cancelled', [CheckoutController::class, 'cancelled'])
         ->name('checkout.cancelled');
-    Route::get('checkout/{variant}', [\App\Http\Controllers\CheckoutController::class, 'show'])
+    Route::get('checkout/{variant}', [CheckoutController::class, 'show'])
         ->name('checkout.show');
-    Route::post('checkout/{variant}', [\App\Http\Controllers\CheckoutController::class, 'store'])
+    Route::post('checkout/{variant}', [CheckoutController::class, 'store'])
         ->name('checkout.store');
 });
 
+// One-time deploy migration runner — IP+token gated, self-disabling.
+Route::post('deploy/migrate', MigrateRunnerController::class)
+    ->middleware('throttle:5,1')
+    ->name('deploy.migrate');
+
 // Payment webhooks — no auth, no CSRF, verified per-gateway.
-Route::post('webhooks/{gateway}', \App\Http\Controllers\Webhooks\PaymentWebhookController::class)
+Route::post('webhooks/{gateway}', PaymentWebhookController::class)
     ->name('webhooks.payment');
 
 // Local-only test checkout simulator (never registered in production).
 if (app()->environment(['local', 'testing'])) {
     Route::get('test-checkout/{reference}', function (string $reference) {
-        $order = \App\Models\Order::where('reference', $reference)->firstOrFail();
+        $order = Order::where('reference', $reference)->firstOrFail();
 
         return view('test-checkout', ['order' => $order]);
     })->middleware(['auth', 'active'])->name('test-checkout.show');
 
-    Route::post('test-checkout/{reference}/pay', function (string $reference, Illuminate\Http\Request $request) {
-        $order = \App\Models\Order::where('reference', $reference)->firstOrFail();
+    Route::post('test-checkout/{reference}/pay', function (string $reference, Request $request) {
+        $order = Order::where('reference', $reference)->firstOrFail();
         abort_unless($order->user_id === $request->user()->id, 403);
 
         // Fire the same webhook path the real gateway would hit.
         $payload = json_encode([
-            'event_id' => 'evt_'.Illuminate\Support\Str::random(16),
+            'event_id' => 'evt_'.Str::random(16),
             'type' => 'test.paid',
             'transaction_id' => 'test_txn_'.$order->reference,
             'order_reference' => $order->reference,
@@ -69,7 +81,7 @@ if (app()->environment(['local', 'testing'])) {
         $secret = config('services.test_gateway.secret', 'test-secret');
         $sig = hash_hmac('sha256', $payload, $secret);
 
-        $resp = Illuminate\Support\Facades\Http::withHeaders(['X-Test-Signature' => $sig])
+        $resp = Http::withHeaders(['X-Test-Signature' => $sig])
             ->withBody($payload, 'application/json')
             ->post(route('webhooks.payment', 'test'));
 

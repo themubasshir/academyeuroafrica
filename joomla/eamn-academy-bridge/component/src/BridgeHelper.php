@@ -1,0 +1,174 @@
+<?php
+
+namespace EamnBridge;
+
+use Joomla\CMS\Factory;
+use Joomla\CMS\User\User;
+use Joomla\CMS\User\UserFactoryInterface;
+use Joomla\Input\Input;
+use Joomla\Registry\Registry;
+
+/**
+ * Bridge protocol implementation for Joomla 4.
+ *
+ * Security model:
+ *  - Authorisation codes: 128-bit random, SHA-256 stored, single-use, 60s TTL,
+ *    bound to the Joomla user id and a `state` nonce supplied by the browser.
+ *  - Exchange endpoint authenticates the academy by HMAC-SHA256 over
+ *    "timestamp\nbody" using a shared secret; 5-minute replay window.
+ *  - No passwords or long-lived tokens ever cross the browser.
+ *
+ * Storage: a dedicated table `#__eamnbridge_codes` (created by the install
+ * script) so codes are server-side only.
+ */
+class BridgeHelper
+{
+    private Registry $params;
+
+    public function __construct(Registry $params)
+    {
+        $this->params = $params;
+    }
+
+    /**
+     * Browser flow: logged-in Joomla user is redirected to the academy with a
+     * fresh single-use code + state nonce.
+     */
+    public function handleGo(Input $input, ?User $user): void
+    {
+        if ($user === null || $user->guest) {
+            // Send them through Joomla login first, then back here.
+            $return = base64_encode(
+                'index.php?option=com_eamnbridge&task=go&target='.$input->getCmd('target', '')
+            );
+            Factory::getApplication()
+                ->redirect('index.php?option=com_users&view=login&return='.$return);
+
+            return;
+        }
+
+        $state = bin2hex(random_bytes(32));
+        $code = bin2hex(random_bytes(32));
+        $target = $input->getCmd('target', 'dashboard'); // dashboard|programme|variant
+        $targetId = $input->getUint('id', 0);
+
+        $this->storeCode($code, $user->id, $state);
+
+        $base = rtrim((string) $this->params->get('academy_base_url'), '/');
+        $query = http_build_query(array_filter([
+            'code' => $code,
+            'state' => $state,
+            'target' => $target,
+            'id' => $targetId ?: null,
+        ]));
+
+        Factory::getApplication()->redirect($base.'/auth/bridge/consume?'.$query);
+    }
+
+    /**
+     * Server-to-server flow: academy POSTs a JSON body {"code": "..."} with
+     * X-EAMN-Timestamp and X-EAMN-Signature headers. We verify, burn the code,
+     * and return identity claims as JSON.
+     */
+    public function handleExchange(Input $input): void
+    {
+        $app = Factory::getApplication();
+        $app->setHeader('Content-Type', 'application/json', true);
+
+        $secret = (string) $this->params->get('bridge_secret');
+        if ($secret === '') {
+            throw new \RuntimeException('Bridge not configured', 503);
+        }
+
+        $timestamp = $_SERVER['HTTP_X_EAMN_TIMESTAMP'] ?? '';
+        $signature = $_SERVER['HTTP_X_EAMN_SIGNATURE'] ?? '';
+        $body = file_get_contents('php://input') ?: '';
+
+        if ($timestamp === '' || $signature === '' || $body === '') {
+            throw new \RuntimeException('Missing signature headers', 401);
+        }
+        if (abs(time() - (int) $timestamp) > 300) {
+            throw new \RuntimeException('Stale request', 401);
+        }
+
+        $expected = hash_hmac('sha256', $timestamp."\n".$body, $secret);
+        if (! hash_equals($expected, $signature)) {
+            throw new \RuntimeException('Bad signature', 401);
+        }
+
+        $data = json_decode($body, true);
+        $code = $data['code'] ?? '';
+        $userId = $this->consumeCode($code);
+
+        if ($userId === null) {
+            throw new \RuntimeException('Invalid or expired code', 401);
+        }
+
+        $user = Factory::getContainer()
+            ->get(UserFactoryInterface::class)
+            ->loadUserById($userId);
+
+        if ($user->block) {
+            throw new \RuntimeException('Account disabled', 403);
+        }
+
+        echo json_encode([
+            'sub' => (string) $user->id,
+            'email' => $user->email,
+            'name' => $user->name,
+            'groups' => $user->getAuthorisedGroups(),
+        ]);
+        $app->close();
+    }
+
+    /** Persist a hashed, expiring, single-use code. */
+    private function storeCode(string $code, int $userId, string $state): void
+    {
+        $db = Factory::getDbo();
+        $db->insertObject('#__eamnbridge_codes', (object) [
+            'code_hash' => hash('sha256', $code),
+            'user_id' => $userId,
+            'state_hash' => hash('sha256', $state),
+            'expires_at' => gmdate('Y-m-d H:i:s', time() + 60),
+            'created_at' => gmdate('Y-m-d H:i:s'),
+        ]);
+    }
+
+    /**
+     * Burn a code and return the owning user id, or null if invalid/expired.
+     * Deleting first inside the lookup makes it single-use.
+     */
+    private function consumeCode(string $code): ?int
+    {
+        if (! preg_match('/^[a-f0-9]{64}$/', $code)) {
+            return null;
+        }
+
+        $db = Factory::getDbo();
+        $hash = hash('sha256', $code);
+
+        $row = $db->setQuery(
+            $db->getQuery(true)
+                ->select(['id', 'user_id', 'expires_at'])
+                ->from('#__eamnbridge_codes')
+                ->where($db->quoteName('code_hash').' = '.$db->quote($hash))
+        )->loadObject();
+
+        if ($row === null) {
+            return null;
+        }
+
+        // Burn regardless of outcome — one shot only.
+        $db->setQuery(
+            $db->getQuery(true)
+                ->delete('#__eamnbridge_codes')
+                ->where($db->quoteName('id').' = '.(int) $row->id)
+        )->execute();
+
+        if (strtotime($row->expires_at) < time()) {
+            return null;
+        }
+
+        return (int) $row->user_id;
+    }
+}
