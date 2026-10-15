@@ -12,7 +12,7 @@ use Illuminate\Support\Number;
 #[Fillable([
     'uploader_id', 'attachable_type', 'attachable_id', 'disk', 'path',
     'original_name', 'description', 'mime', 'size_bytes', 'visibility',
-    'group_id', 'student_id',
+    'group_id', 'student_id', 'source_key',
 ])]
 class Material extends Model
 {
@@ -58,6 +58,11 @@ class Material extends Model
     {
         if ($user->isAdmin() || $this->uploader_id === $user->id) {
             return true;
+        }
+
+        // Trainer manuals / answer keys — students can never see these.
+        if ($this->visibility === 'trainers') {
+            return $user->isTrainer();
         }
 
         if ($this->student_id !== null) {

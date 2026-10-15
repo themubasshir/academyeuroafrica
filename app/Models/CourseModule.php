@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['course_id', 'title', 'sort_order', 'status'])]
+#[Fillable(['course_id', 'title', 'sort_order', 'source_key', 'status'])]
 class CourseModule extends Model
 {
     use HasFactory;
