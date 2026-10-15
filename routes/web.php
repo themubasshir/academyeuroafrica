@@ -14,7 +14,9 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
-Route::get('/', fn () => view('welcome'))->name('home');
+Route::get('/', fn () => view('welcome', [
+    'programmes' => \App\Models\Programme::where('status', 'published')->withCount('courses')->get(),
+]))->name('home');
 
 // Public catalogue
 Route::livewire('programmes/{programme}', 'catalogue.programme-show')->name('programme.show');
