@@ -25,33 +25,45 @@
     $role = $user->isAdmin() ? 'Administration' : ($user->isTrainer() ? 'Trainer' : 'Student');
 @endphp
 
-<aside @class(['w-64 shrink-0 border-r border-gray-200 bg-white', 'hidden lg:block' => ! $mobile]) aria-label="Main navigation">
-    <nav class="{{ $mobile ? '' : 'sticky top-16' }} flex flex-col gap-1 p-4">
-        <p class="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">{{ $role }}</p>
-        @foreach ($items as [$label, $href, $icon])
-            @php $active = request()->routeIs($href.'*'); @endphp
-            <a href="{{ route($href) }}"
-               @class([
-                   'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition',
-                   'bg-eamn-50 text-eamn-800' => $active,
-                   'text-gray-600 hover:bg-gray-50 hover:text-gray-900' => ! $active,
-               ])
-               @if ($active) aria-current="page" @endif>
-                <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icon }}"/>
-                </svg>
-                {{ $label }}
-            </a>
-        @endforeach
+<aside @class(['flex w-64 shrink-0 flex-col bg-navy-900', 'hidden lg:flex' => ! $mobile]) aria-label="Main navigation">
+    <div class="{{ $mobile ? '' : 'sticky top-0' }} flex min-h-0 flex-1 flex-col">
+        @unless ($mobile)
+            <div class="flex h-16 items-center border-b border-navy-800 px-5">
+                <a href="{{ route('home') }}" aria-label="EAMN Academy home"><x-ui.brand dark size="sm" /></a>
+            </div>
+        @endunless
 
-        <div class="mt-auto border-t border-gray-100 pt-4">
+        <nav class="flex-1 overflow-y-auto px-3 py-4">
+            <p class="register px-3 pb-3 !text-navy-100">{{ $role }} register</p>
+            <ul class="space-y-px">
+                @foreach ($items as [$label, $href, $icon])
+                    @php $active = request()->routeIs($href.'*'); @endphp
+                    <li>
+                        <a href="{{ route($href) }}"
+                           @class([
+                               'group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition',
+                               'bg-navy-800 font-semibold text-white shadow-[inset_2px_0_0_0_var(--color-seal-400)]' => $active,
+                               'font-medium text-navy-100 hover:bg-navy-850 hover:text-white' => ! $active,
+                           ])
+                           @if ($active) aria-current="page" @endif>
+                            <svg class="h-5 w-5 shrink-0 {{ $active ? 'text-seal-400' : 'text-navy-100/80 group-hover:text-navy-100' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icon }}"/>
+                            </svg>
+                            {{ $label }}
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        </nav>
+
+        <div class="border-t border-navy-800 p-3">
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
-                <button type="submit" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 lg:hidden">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                <button type="submit" class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-navy-100/75 transition hover:bg-navy-850 hover:text-white lg:hidden">
+                    <svg class="h-5 w-5 text-navy-100/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                     Log out
                 </button>
             </form>
         </div>
-    </nav>
+    </div>
 </aside>
