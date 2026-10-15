@@ -25,12 +25,21 @@ Primary sign-in = Joomla bridge SSO (`Services\Joomla\BridgeClient` + `BridgeAut
 | 4 | Classroom | LiveSession, Group, GroupMember, Announcement |
 | 5 | Assessment | Assignment→Submission→Grade; Quiz→Question→Option→Attempt |
 | 6 | Private training | TrainerAvailability, Appointment, SessionCreditLedger (append-only) |
-| 7 | Joomla | plugin zip `joomla/eamn-academy-bridge` |
-| 8 | Hardening | security tests, deploy packaging |
+| 7 | Joomla | plugin `com_eamnbridge`, `BridgeStart`/`Consume`/`Events` controllers |
+| 8 | Hardening | `SecurityHeaders`, `MigrateRunnerController` |
+| 9 | Functional UI | File delivery (`FileService`+`MaterialController`), student workspace (`learn/*`), trainer CRUD, admin lists, `VideoProvider`/`VideoManager`/`GenericProvider`, booking UI |
 
 ## Content vs progress
 Course content is shared (one copy). Per-student state (enrolment, lesson_progress, quiz_attempts, submissions) lives in separate rows keyed by user — never duplicated content.
 
 ## Files
 - Private materials/submissions on `local` disk, randomised stored names, MIME allowlist, served via authorised controller — never public web root.
+- `Domain\Files\FileService` stores uploads; `Http\Controllers\Files\MaterialController` authorises per-download (enrolled student / assigned trainer / admin).
 - Meeting URLs stored encrypted, exposed only to eligible users.
+
+## Video
+`Services\Video\Contracts\VideoProvider` + `VideoManager` resolve an embed/playback URL per `course_videos.provider`. `GenericProvider` covers YouTube-nocookie/Vimeo/direct embed with no credentials. A real provider (Vimeo/Cloudflare Stream) is wired via the same contract once account+cost is chosen — playback always stays behind enrolment authorisation; no transcoding on shared hosting.
+
+## Status — implemented vs pending credentials
+- **Working end-to-end (dev/test):** auth+roles, bridge SSO (contract-tested), catalogue, checkout (test gateway), enrolment, student workspace, files, trainer CRUD, quiz engine+builder, booking+credits, admin lists.
+- **Needs prod credentials/config:** real Stripe keys + live webhook, Joomla staging install of `com_eamnbridge` + lifecycle emitter + 7 page mappings, real video provider account, InterServer `.env` + cron.
