@@ -28,6 +28,7 @@ use App\Models\TrainerAssignment;
 use App\Models\TrainerAvailability;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Demo data for local UI development / screenshots only.
@@ -96,13 +97,13 @@ class DemoSeeder extends Seeder
             'sort_order' => 2,
         ]);
 
-        $liveVariant = CourseVariant::firstOrCreate(['course_id' => $radio->id, 'name' => 'Live cohort'], [
+        $liveVariant = CourseVariant::firstOrCreate(['course_id' => $radio->id, 'name' => 'Live Online Training'], [
             'delivery_type' => 'live', 'price_cents' => 12900, 'currency' => 'EUR', 'capacity' => 20, 'status' => 'published',
         ]);
         $selfVariant = CourseVariant::firstOrCreate(['course_id' => $radio->id, 'name' => 'Self-paced'], [
             'delivery_type' => 'prerecorded', 'price_cents' => 8900, 'currency' => 'EUR', 'status' => 'published',
         ]);
-        $tvVariant = CourseVariant::firstOrCreate(['course_id' => $tv->id, 'name' => 'Live cohort'], [
+        $tvVariant = CourseVariant::firstOrCreate(['course_id' => $tv->id, 'name' => 'Live Online Training'], [
             'delivery_type' => 'live', 'price_cents' => 14900, 'currency' => 'EUR', 'capacity' => 12, 'status' => 'published',
         ]);
 
@@ -134,20 +135,68 @@ class DemoSeeder extends Seeder
             'sort_order' => 1, 'status' => 'published', 'type' => 'text', 'content' => 'Cables, headsets, cues and floor signals.',
         ]);
 
+        // Group (needed before materials targeting) --------------------------
+        $group = Group::firstOrCreate(['course_id' => $radio->id, 'name' => 'Cohort A — March'], ['trainer_id' => $trainer->id]);
+
         // Materials ---------------------------------------------------------
-        Material::firstOrCreate([
-            'attachable_type' => Lesson::class, 'attachable_id' => $l4->id,
-            'original_name' => 'segment-template.pdf',
-        ], [
-            'uploader_id' => $trainer->id, 'disk' => 'local', 'path' => 'materials/segment-template.pdf',
-            'mime' => 'application/pdf', 'size_bytes' => 48211, 'visibility' => 'enrolled',
-        ]);
+        // Write real files to the private disk so downloads actually work.
+        $mkFile = function (string $path, string $body) {
+            if (! Storage::disk('local')->exists($path)) {
+                Storage::disk('local')->put($path, $body);
+            }
+
+            return Storage::disk('local')->size($path);
+        };
+        $pdf = "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Size 1>>\n%%EOF\n";
+
         Material::firstOrCreate([
             'attachable_type' => Course::class, 'attachable_id' => $radio->id,
             'original_name' => 'course-handbook.pdf',
         ], [
             'uploader_id' => $trainer->id, 'disk' => 'local', 'path' => 'materials/course-handbook.pdf',
-            'mime' => 'application/pdf', 'size_bytes' => 128400, 'visibility' => 'enrolled',
+            'description' => 'Course handbook — policies, reading list, schedule.',
+            'mime' => 'application/pdf', 'size_bytes' => $mkFile('materials/course-handbook.pdf', $pdf),
+            'visibility' => 'enrolled',
+        ]);
+        Material::firstOrCreate([
+            'attachable_type' => Course::class, 'attachable_id' => $radio->id,
+            'original_name' => 'microphone-setup-guide.pdf',
+        ], [
+            'uploader_id' => $trainer->id, 'disk' => 'local', 'path' => 'materials/mic-setup.pdf',
+            'description' => 'Mic positioning and gain staging.',
+            'mime' => 'application/pdf', 'size_bytes' => $mkFile('materials/mic-setup.pdf', $pdf),
+            'visibility' => 'enrolled',
+        ]);
+        Material::firstOrCreate([
+            'attachable_type' => Lesson::class, 'attachable_id' => $l4->id,
+            'original_name' => 'segment-template.pdf',
+        ], [
+            'uploader_id' => $trainer->id, 'disk' => 'local', 'path' => 'materials/segment-template.pdf',
+            'description' => 'Fill-in template for the 3-minute segment.',
+            'mime' => 'application/pdf', 'size_bytes' => $mkFile('materials/segment-template.pdf', $pdf),
+            'visibility' => 'enrolled',
+        ]);
+
+        // Group-targeted and student-targeted materials.
+        Material::firstOrCreate([
+            'attachable_type' => Course::class, 'attachable_id' => $radio->id,
+            'original_name' => 'cohort-a-briefing.pdf',
+        ], [
+            'uploader_id' => $trainer->id, 'disk' => 'local', 'path' => 'materials/cohort-a-briefing.pdf',
+            'description' => 'Briefing pack for Cohort A only.',
+            'mime' => 'application/pdf', 'size_bytes' => $mkFile('materials/cohort-a-briefing.pdf', $pdf),
+            'visibility' => 'enrolled',
+            'group_id' => $group->id,
+        ]);
+        Material::firstOrCreate([
+            'attachable_type' => Course::class, 'attachable_id' => $radio->id,
+            'original_name' => 'ada-progress-feedback.pdf',
+        ], [
+            'uploader_id' => $trainer->id, 'disk' => 'local', 'path' => 'materials/ada-progress-feedback.pdf',
+            'description' => 'Individual feedback on your first bulletin.',
+            'mime' => 'application/pdf', 'size_bytes' => $mkFile('materials/ada-progress-feedback.pdf', $pdf),
+            'visibility' => 'enrolled',
+            'student_id' => $student->id,
         ]);
 
         // Trainer assignment + availability --------------------------------
@@ -163,9 +212,6 @@ class DemoSeeder extends Seeder
                 'timezone' => 'Europe/Brussels',
             ]);
         }
-
-        // Group -------------------------------------------------------------
-        $group = Group::firstOrCreate(['course_id' => $radio->id, 'name' => 'Cohort A — March'], ['trainer_id' => $trainer->id]);
 
         // Enrolments --------------------------------------------------------
         $enrolment = Enrolment::firstOrCreate(['user_id' => $student->id, 'course_variant_id' => $liveVariant->id], [

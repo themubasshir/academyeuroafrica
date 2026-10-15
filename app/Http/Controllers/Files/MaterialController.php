@@ -6,9 +6,7 @@ use App\Domain\Files\FileService;
 use App\Http\Controllers\Controller;
 use App\Models\AssignmentAttachment;
 use App\Models\Course;
-use App\Models\CourseModule;
 use App\Models\Enrolment;
-use App\Models\Lesson;
 use App\Models\Material;
 use App\Models\TrainerAssignment;
 use Illuminate\Support\Facades\Storage;
@@ -40,16 +38,18 @@ class MaterialController extends Controller
         );
     }
 
-    /** Who may download a material: enrolled on its course, assigned trainer, or admin. */
+    /** Who may download a material: enrolled on its course (and in any
+     * group/student audience), assigned trainer, or admin. */
     private function authorizeMaterial($user, Material $material): void
     {
         if ($user->isAdmin()) {
             return;
         }
 
-        $course = $this->resolveCourse($material);
+        $course = $material->course();
+        abort_if($course === null, 403);
 
-        if ($user->isTrainer() && $course !== null) {
+        if ($user->isTrainer()) {
             $assigned = TrainerAssignment::where('trainer_id', $user->id)
                 ->where('course_id', $course->id)->exists();
             abort_unless($assigned, 403);
@@ -57,22 +57,13 @@ class MaterialController extends Controller
             return;
         }
 
-        // Student — must be enrolled on the owning course.
-        abort_if($course === null, 403);
+        // Student — must be enrolled on the owning course AND inside the
+        // material's audience (course-wide | group | individual).
         $enrolled = Enrolment::where('user_id', $user->id)
             ->where('status', 'active')
             ->whereHas('variant', fn ($q) => $q->where('course_id', $course->id))
             ->exists();
         abort_unless($enrolled, 403);
-    }
-
-    private function resolveCourse(Material $material): ?Course
-    {
-        return match ($material->attachable_type) {
-            Course::class => $material->attachable,
-            CourseModule::class => $material->attachable?->course,
-            Lesson::class => $material->attachable?->module?->course,
-            default => null,
-        };
+        abort_unless($material->visibleTo($user), 403);
     }
 }

@@ -5,7 +5,12 @@ namespace App\Livewire\Trainer;
 use App\Domain\Files\FileService;
 use App\Models\Course;
 use App\Models\CourseModule;
+use App\Models\Enrolment;
+use App\Models\Group;
 use App\Models\Lesson;
+use App\Models\Material;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -30,7 +35,25 @@ class CourseManage extends Component
 
     public $materialUpload;
 
+    public $materialReplace = null;
+
     public ?int $attachModuleId = null;
+
+    public ?int $attachLessonId = null;
+
+    public string $materialDescription = '';
+
+    public string $materialAudience = 'course'; // course | group | student
+
+    public ?int $materialGroupId = null;
+
+    public ?int $materialStudentId = null;
+
+    public ?int $renamingId = null;
+
+    public string $renameValue = '';
+
+    public ?int $replacingId = null;
 
     public function mount(Course $course): void
     {
@@ -127,21 +150,102 @@ class CourseManage extends Component
 
     public function uploadMaterial(FileService $files): void
     {
-        $this->validate(['materialUpload' => 'required|file|max:25600', 'attachModuleId' => 'nullable|integer']);
-        $attachable = $this->attachModuleId
-            ? $this->course->modules()->findOrFail($this->attachModuleId)
-            : $this->course;
+        $this->validate([
+            'materialUpload' => 'required|file|max:25600',
+            'attachModuleId' => 'nullable|integer',
+            'attachLessonId' => 'nullable|integer',
+            'materialDescription' => 'nullable|string|max:255',
+            'materialAudience' => 'required|in:course,group,student',
+            'materialGroupId' => 'required_if:materialAudience,group|nullable|integer',
+            'materialStudentId' => 'required_if:materialAudience,student|nullable|integer',
+        ]);
 
-        $files->storeMaterial($this->materialUpload, auth()->user(), $attachable);
-        $this->reset(['materialUpload', 'attachModuleId']);
+        $attachable = $this->attachLessonId
+            ? Lesson::where('id', $this->attachLessonId)->whereHas('module', fn ($q) => $q->where('course_id', $this->course->id))->firstOrFail()
+            : ($this->attachModuleId
+                ? $this->course->modules()->findOrFail($this->attachModuleId)
+                : $this->course);
+
+        $material = $files->storeMaterial(
+            $this->materialUpload,
+            auth()->user(),
+            $attachable,
+            'enrolled'
+        );
+        $material->forceFill([
+            'description' => $this->materialDescription ?: null,
+            'group_id' => $this->materialAudience === 'group' ? $this->materialGroupId : null,
+            'student_id' => $this->materialAudience === 'student' ? $this->materialStudentId : null,
+        ])->save();
+
+        $this->reset(['materialUpload', 'attachModuleId', 'attachLessonId', 'materialDescription', 'materialAudience', 'materialGroupId', 'materialStudentId']);
         session()->flash('saved', 'Material uploaded.');
+    }
+
+    /** Rename = change display name/description, not the stored path. */
+    public function startRename(int $id): void
+    {
+        $m = $this->courseMaterials()->findOrFail($id);
+        $this->renamingId = $id;
+        $this->renameValue = $m->description ?: $m->original_name;
+    }
+
+    public function saveRename(): void
+    {
+        $this->validate(['renameValue' => 'required|string|max:255']);
+        $m = $this->courseMaterials()->findOrFail($this->renamingId);
+        $m->forceFill(['description' => $this->renameValue])->save();
+        $this->reset(['renamingId', 'renameValue']);
+        session()->flash('saved', 'Material renamed.');
+    }
+
+    /** Replace the file body, keeping the record (and its audience) intact. */
+    public function replaceMaterial(FileService $files): void
+    {
+        $this->validate(['materialReplace' => 'required|file|max:25600']);
+        $m = $this->courseMaterials()->findOrFail($this->replacingId);
+        Storage::disk($m->disk)->delete($m->path);
+        $m->forceFill([
+            'path' => 'materials/'.Str::random(40).'.'.($this->materialReplace->guessExtension() ?: 'bin'),
+            'mime' => $this->materialReplace->getMimeType(),
+            'size_bytes' => $this->materialReplace->getSize(),
+            'original_name' => $this->materialReplace->getClientOriginalName(),
+        ])->save();
+        Storage::disk($m->disk)->put($m->path, $this->materialReplace->getContent());
+        $this->reset(['materialReplace', 'replacingId']);
+        session()->flash('saved', 'File replaced.');
+    }
+
+    public function deleteMaterial(int $id): void
+    {
+        $m = $this->courseMaterials()->findOrFail($id);
+        Storage::disk($m->disk)->delete($m->path);
+        $m->delete();
+        session()->flash('saved', 'Material deleted.');
+    }
+
+    /** Materials on this course's whole tree — course, its modules, its lessons. */
+    private function courseMaterials()
+    {
+        $moduleIds = $this->course->modules()->pluck('id');
+        $lessonIds = Lesson::whereIn('course_module_id', $moduleIds)->pluck('id');
+
+        return Material::where(fn ($q) => $q
+            ->where(fn ($x) => $x->where('attachable_type', Course::class)->where('attachable_id', $this->course->id))
+            ->orWhere(fn ($x) => $x->where('attachable_type', CourseModule::class)->whereIn('attachable_id', $moduleIds))
+            ->orWhere(fn ($x) => $x->where('attachable_type', Lesson::class)->whereIn('attachable_id', $lessonIds))
+        );
     }
 
     public function render()
     {
         return view('livewire.trainer.course-manage', [
             'modules' => $this->course->modules()->with('lessons.video')->orderBy('sort_order')->get(),
-            'materials' => $this->course->materials()->latest()->get(),
+            'materials' => $this->courseMaterials()->with('group', 'student')->latest()->get(),
+            'groups' => Group::where('course_id', $this->course->id)->get(),
+            'students' => Enrolment::where('status', 'active')
+                ->whereHas('variant', fn ($q) => $q->where('course_id', $this->course->id))
+                ->with('user')->get()->pluck('user')->filter()->sortBy('name')->values(),
         ])->layout('layouts::app', ['title' => 'Manage: '.$this->course->title]);
     }
 }

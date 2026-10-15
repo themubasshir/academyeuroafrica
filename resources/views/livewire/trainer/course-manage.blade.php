@@ -80,21 +80,82 @@
         <section class="card-pad self-start">
             <h2 class="h3">Materials</h2>
             <form wire:submit="uploadMaterial" class="mt-3 space-y-3">
-                <select wire:model="attachModuleId" aria-label="Attach material to" class="input">
+                <select wire:model.live="attachModuleId" aria-label="Attach material to" class="input">
                     <option value="">Whole course</option>
                     @foreach ($modules as $m)<option value="{{ $m->id }}">Module: {{ $m->title }}</option>@endforeach
                 </select>
+                @if ($attachModuleId)
+                    <select wire:model="attachLessonId" aria-label="Attach to lesson (optional)" class="input">
+                        <option value="">Module-level</option>
+                        @foreach ($modules->firstWhere('id', (int) $attachModuleId)?->lessons ?? [] as $l)
+                            <option value="{{ $l->id }}">Lesson: {{ $l->title }}</option>
+                        @endforeach
+                    </select>
+                @endif
+                <input wire:model="materialDescription" placeholder="Description (shown to students)" aria-label="Material description" class="input">
+                <select wire:model.live="materialAudience" aria-label="Audience" class="input">
+                    <option value="course">Whole course</option>
+                    <option value="group">A group</option>
+                    <option value="student">One student</option>
+                </select>
+                @if ($materialAudience === 'group')
+                    <select wire:model="materialGroupId" aria-label="Group" class="input">
+                        <option value="">Select group…</option>
+                        @foreach ($groups as $g)<option value="{{ $g->id }}">{{ $g->name }}</option>@endforeach
+                    </select>
+                @elseif ($materialAudience === 'student')
+                    <select wire:model="materialStudentId" aria-label="Student" class="input">
+                        <option value="">Select student…</option>
+                        @foreach ($students as $s)<option value="{{ $s->id }}">{{ $s->name }}</option>@endforeach
+                    </select>
+                @endif
                 <input type="file" wire:model="materialUpload" aria-label="Upload material" class="block w-full text-sm text-ink-600">
                 @error('materialUpload')<p class="text-xs text-red-700">{{ $message }}</p>@enderror
+                @error('materialGroupId')<p class="text-xs text-red-700">{{ $message }}</p>@enderror
+                @error('materialStudentId')<p class="text-xs text-red-700">{{ $message }}</p>@enderror
                 <button class="btn-primary">Upload</button>
             </form>
-            <ul class="mt-4 space-y-1.5 text-sm">
-                @foreach ($materials as $m)
-                    <li class="flex items-center gap-2 truncate text-ink-600">
-                        <svg class="h-4 w-4 shrink-0 text-ink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6M9 8h6M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/></svg>
-                        <span class="truncate">{{ $m->original_name }}</span>
+
+            <ul class="mt-4 space-y-3 text-sm">
+                @forelse ($materials as $m)
+                    <li class="rounded-md border border-paper-200 bg-paper-50/60 p-3">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <p class="truncate font-semibold text-ink-900">{{ $m->original_name }}</p>
+                                <p class="mt-0.5 truncate text-xs text-ink-500">
+                                    {{ $m->typeLabel() }} · {{ $m->humanSize() }}
+                                    · {{ class_basename($m->attachable_type) }}@if($m->attachable && $m->attachable_type !== \App\Models\Course::class): {{ $m->attachable->title ?? '' }}@endif
+                                    @if ($m->group) · <span class="text-seal-600">{{ $m->group->name }}</span>@endif
+                                    @if ($m->student) · <span class="text-amber-700">{{ $m->student->name }}</span>@endif
+                                </p>
+                                @if ($m->description)<p class="mt-1 text-xs text-ink-600">{{ $m->description }}</p>@endif
+                            </div>
+                        </div>
+
+                        @if ($renamingId === $m->id)
+                            <div class="mt-2 flex gap-2">
+                                <input wire:model="renameValue" class="input flex-1" aria-label="New name">
+                                <button wire:click="saveRename" class="btn-primary btn-sm">Save</button>
+                                <button wire:click="$set('renamingId', null)" class="btn-ghost btn-sm">✕</button>
+                            </div>
+                        @elseif ($replacingId === $m->id)
+                            <div class="mt-2 flex items-center gap-2">
+                                <input type="file" wire:model="materialReplace" class="w-full text-xs" aria-label="Replacement file">
+                                <button wire:click="replaceMaterial" class="btn-primary btn-sm">Go</button>
+                                <button wire:click="$set('replacingId', null)" class="btn-ghost btn-sm">✕</button>
+                            </div>
+                        @else
+                            <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                                <a href="{{ route('files.material', $m) }}" class="font-medium text-reg-700 hover:underline">Download</a>
+                                <button wire:click="startRename({{ $m->id }})" class="font-medium text-ink-600 hover:underline">Rename</button>
+                                <button wire:click="$set('replacingId', {{ $m->id }})" class="font-medium text-ink-600 hover:underline">Replace</button>
+                                <button wire:click="deleteMaterial({{ $m->id }})" wire:confirm="Delete this file? Students will lose access." class="font-medium text-red-700 hover:underline">Delete</button>
+                            </div>
+                        @endif
                     </li>
-                @endforeach
+                @empty
+                    <li class="text-xs text-ink-500">No materials yet.</li>
+                @endforelse
             </ul>
         </section>
     </div>

@@ -3,18 +3,45 @@
 namespace App\Livewire\Student;
 
 use App\Models\Assignment;
+use App\Models\Course;
+use App\Models\CourseModule;
 use App\Models\Enrolment;
+use App\Models\Lesson;
 use App\Models\LiveSession;
+use App\Models\Material;
 use App\Models\Quiz;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class CourseShow extends Component
 {
     public Enrolment $enrolment;
 
+    #[Url]
+    public string $tab = 'overview';
+
     public function mount(Enrolment $enrolment): void
     {
         $this->authorize('view', $enrolment);
+    }
+
+    /** All materials on the course tree (course → module → lesson) visible to this student. */
+    private function visibleMaterials()
+    {
+        $course = $this->enrolment->variant->course;
+        $user = auth()->user();
+        $moduleIds = $course->modules()->pluck('id');
+        $lessonIds = Lesson::whereIn('course_module_id', $moduleIds)->pluck('id');
+
+        return Material::with('group')
+            ->where(function ($q) use ($course, $moduleIds, $lessonIds) {
+                $q->where(fn ($x) => $x->where('attachable_type', Course::class)->where('attachable_id', $course->id))
+                    ->orWhere(fn ($x) => $x->where('attachable_type', CourseModule::class)->whereIn('attachable_id', $moduleIds))
+                    ->orWhere(fn ($x) => $x->where('attachable_type', Lesson::class)->whereIn('attachable_id', $lessonIds));
+            })
+            ->get()
+            ->filter(fn (Material $m) => $m->visibleTo($user))
+            ->sortByDesc('created_at')->values();
     }
 
     public function render()
@@ -35,8 +62,8 @@ class CourseShow extends Component
                 ->where('status', 'published')->orderBy('due_at')->get()
                 ->filter(fn ($a) => $a->isRecipient(auth()->user())),
             'quizzes' => Quiz::where('course_id', $course->id)
-                ->where('status', 'published')->get(),
-            'materials' => $course->materials()->get(),
+                ->where('status', 'published')->withCount('questions')->get(),
+            'materials' => $this->visibleMaterials(),
         ])->layout('layouts::app', ['title' => $course->title]);
     }
 }
