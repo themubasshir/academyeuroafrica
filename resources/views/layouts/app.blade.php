@@ -9,7 +9,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body class="min-h-full bg-paper-50 text-ink-900 antialiased">
+<body class="min-h-full bg-paper-50 font-sans text-ink-900 antialiased">
     <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-reg-700 focus:px-4 focus:py-2 focus:text-white">
         Skip to content
     </a>
