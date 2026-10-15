@@ -6,6 +6,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('welcome'))->name('home');
 
+// Public catalogue
+Route::livewire('programmes/{programme}', 'catalogue.programme-show')->name('programme.show');
+Route::livewire('courses/{course}', 'catalogue.course-show')->name('course.show');
+
 // Local credential login (staff fallback + development).
 Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'create'])->name('login');
@@ -28,6 +32,9 @@ Route::get('auth/bridge/consume', BridgeConsumeController::class)
 Route::middleware(['auth', 'active'])->group(function () {
     Route::livewire('dashboard', 'student.dashboard')
         ->name('student.dashboard');
+
+    Route::get('checkout/{variant}', fn () => view('placeholder', ['title' => 'Checkout']))
+        ->name('checkout.show'); // Phase 3
 });
 
 Route::middleware(['auth', 'active', 'role:trainer,super-admin,academy-admin'])
