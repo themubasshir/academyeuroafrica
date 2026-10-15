@@ -8,13 +8,24 @@
     <description>EAMN Academy Bridge — SSO code exchange, purchase mapping and lifecycle events for academy.euroafricamedia.eu.</description>
 
     <files>
-        <filename component="com_eamnbridge">eamnbridge.php</filename>
-        <folder>src</folder>
+        <filename component="com_eamnbridge">component/eamnbridge.php</filename>
+        <folder>component/src</folder>
     </files>
+
+    <install>
+        <sql>
+            <file driver="mysql" charset="utf8">component/admin/install.sql</file>
+        </sql>
+    </install>
+    <uninstall>
+        <sql>
+            <file driver="mysql" charset="utf8">component/admin/uninstall.sql</file>
+        </sql>
+    </uninstall>
 
     <administration>
         <files>
-            <folder>admin</folder>
+            <folder>component/admin</folder>
         </files>
     </administration>
 
