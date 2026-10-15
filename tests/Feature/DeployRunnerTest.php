@@ -46,8 +46,19 @@ class DeployRunnerTest extends TestCase
     public function test_denies_after_done_flag(): void
     {
         Storage::disk('local')->put('deploy.token', 'right-token');
-        Storage::disk('local')->put('deploy.done', 'done');
+        // Per-command flag: default command is "migrate --force".
+        Storage::disk('local')->put('deploy.done.'.md5('migrate --force'), 'done');
 
         $this->hit(['token' => 'right-token'])->assertNotFound();
+    }
+
+    public function test_allows_catalogue_commands_in_allowlist(): void
+    {
+        Storage::disk('local')->put('deploy.token', 'right-token');
+
+        // catalogue:variants is in the allowlist — passes the command gate.
+        // Assert it does NOT fail with the 422 "Command not allowed" response.
+        $resp = $this->hit(['token' => 'right-token', 'run' => 'catalogue:variants']);
+        $this->assertNotEquals(422, $resp->status());
     }
 }

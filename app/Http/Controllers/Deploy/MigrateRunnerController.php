@@ -15,16 +15,26 @@ use Illuminate\Support\Facades\Storage;
  * Guard stack (ALL required):
  *  - request IP in DEPLOY_ALLOWED_IPS
  *  - valid `token` equal to the single-use hash in storage/app/deploy.token
- *  - the runner not already used (flag file)
+ *  - the specific command not already run (per-command flag file)
  *  - only a fixed allowlist of commands can run — never arbitrary input
  *  - every attempt is audit-logged
  *
- * On success it writes a `deploy.done` flag so it cannot run again until the
- * flag is deliberately removed during the next deployment.
+ * Each allowed command writes `deploy.done.<md5>` on success so it cannot run
+ * again until that flag is deliberately removed during the next deploy.
  */
 class MigrateRunnerController extends Controller
 {
-    private const ALLOWED = ['migrate --force', 'db:seed --class=RoleSeeder --force'];
+    /**
+     * Fixed allowlist — never arbitrary input. Phase 14 catalogue commands are
+     * idempotent (source_key dedupe) so running them more than once is safe;
+     * they are still token+IP gated and audit-logged like everything else.
+     */
+    private const ALLOWED = [
+        'migrate --force',
+        'db:seed --class=RoleSeeder --force',
+        'catalogue:import',
+        'catalogue:variants',
+    ];
 
     public function __invoke(Request $request): JsonResponse
     {
@@ -32,7 +42,6 @@ class MigrateRunnerController extends Controller
         abort_if(empty($allowedIps) || ! in_array($request->ip(), $allowedIps, true), 404);
 
         $disk = Storage::disk('local');
-        abort_if($disk->exists('deploy.done'), 404);
 
         $expected = $disk->exists('deploy.token') ? trim($disk->get('deploy.token')) : '';
         $token = $request->string('token');
@@ -41,21 +50,27 @@ class MigrateRunnerController extends Controller
         $command = $request->string('run', 'migrate --force')->toString();
         abort_unless(in_array($command, self::ALLOWED, true), 422, 'Command not allowed.');
 
+        // Per-command once-guard: each allowed command runs once per deploy
+        // window. Idempotent catalogue commands may be re-run by deleting the
+        // matching flag file via File Manager.
+        $flag = 'deploy.done.'.md5($command);
+        abort_if($disk->exists($flag), 404);
+
         AuditLog::record('deploy.migrate', null, ['command' => $command, 'ip' => $request->ip()]);
 
         [$cmd, $args] = array_pad(explode(' ', $command, 2), 2, '');
-        $params = [];
-        if ($args) {
-            parse_str(str_replace(['--', '='], ['', '='], $args), $parsed);
-            $params = $parsed + ['--force' => true];
-        } else {
-            $params = ['--force' => true];
+        // Translate "--flag[=v] --class=X" tokens into Artisan's --flag params.
+        $params = ['--force' => true];
+        foreach (preg_split('/\s+/', trim($args)) as $tok) {
+            if (preg_match('/^--([a-zA-Z-]+)(?:=(.*))?$/', $tok, $m)) {
+                $params['--'.$m[1]] = $m[2] ?? true;
+            }
         }
 
         $exit = Artisan::call($cmd, $params);
 
         if ($exit === 0) {
-            $disk->put('deploy.done', now()->toIso8601String());
+            $disk->put($flag, now()->toIso8601String());
         }
 
         return response()->json([
