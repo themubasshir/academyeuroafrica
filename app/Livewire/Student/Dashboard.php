@@ -2,18 +2,32 @@
 
 namespace App\Livewire\Student;
 
+use App\Models\Assignment;
+use App\Models\LiveSession;
 use Livewire\Component;
 
 class Dashboard extends Component
 {
     public function render()
     {
-        $enrolments = auth()->user()->enrolments()
-            ->with('variant.course')
+        $user = auth()->user();
+        $enrolments = $user->enrolments()
+            ->with('variant.course.programme')
             ->latest('enrolled_at')
             ->get();
 
-        return view('livewire.student.dashboard', compact('enrolments'))
-            ->layout('layouts::app', ['title' => 'My Courses']);
+        $courseIds = $enrolments->pluck('variant.course_id');
+
+        return view('livewire.student.dashboard', [
+            'enrolments' => $enrolments,
+            'upcoming' => LiveSession::whereIn('course_id', $courseIds)
+                ->where('status', 'scheduled')->where('starts_at', '>', now())
+                ->orderBy('starts_at')->get()
+                ->filter(fn ($s) => $s->visibleTo($user))->take(5),
+            'due' => Assignment::whereIn('course_id', $courseIds)
+                ->where('status', 'published')->where('due_at', '>', now())
+                ->orderBy('due_at')->get()
+                ->filter(fn ($a) => $a->isRecipient($user))->take(5),
+        ])->layout('layouts::app', ['title' => 'My Courses']);
     }
 }

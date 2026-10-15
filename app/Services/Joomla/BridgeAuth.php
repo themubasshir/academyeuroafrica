@@ -28,21 +28,11 @@ class BridgeAuth
     {
         $claims = $this->client->exchangeCode($code);
 
-        return DB::transaction(function () use ($claims) {
-            $identity = ExternalIdentity::where('provider', 'joomla')
-                ->where('subject', $claims['sub'])
-                ->first();
-
-            if ($identity !== null) {
-                $user = $identity->user;
-                $this->syncUser($user, $claims);
-                AuditLog::record('bridge.login', $user, ['provider' => 'joomla']);
-
-                return $user;
-            }
-
+        // Collision check BEFORE the transaction so the conflict row persists
+        // even though we throw afterwards.
+        $mapped = ExternalIdentity::where('provider', 'joomla')->where('subject', $claims['sub'])->exists();
+        if (! $mapped) {
             $existing = User::where('email', $claims['email'])->first();
-
             if ($existing !== null) {
                 DB::table('identity_conflicts')->insert([
                     'provider' => 'joomla',
@@ -55,6 +45,20 @@ class BridgeAuth
                 AuditLog::record('bridge.identity_conflict', $existing, ['subject' => $claims['sub']]);
 
                 throw new RuntimeException('identity-conflict');
+            }
+        }
+
+        return DB::transaction(function () use ($claims) {
+            $identity = ExternalIdentity::where('provider', 'joomla')
+                ->where('subject', $claims['sub'])
+                ->first();
+
+            if ($identity !== null) {
+                $user = $identity->user;
+                $this->syncUser($user, $claims);
+                AuditLog::record('bridge.login', $user, ['provider' => 'joomla']);
+
+                return $user;
             }
 
             $user = User::create([

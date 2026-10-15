@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -36,6 +35,12 @@ class User extends Authenticatable
     public function trainerAssignments(): HasMany
     {
         return $this->hasMany(TrainerAssignment::class, 'trainer_id');
+    }
+
+    /** @return HasMany<TrainerAvailability, $this> */
+    public function availabilities(): HasMany
+    {
+        return $this->hasMany(TrainerAvailability::class, 'trainer_id');
     }
 
     public function isActive(): bool

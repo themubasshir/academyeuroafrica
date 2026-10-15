@@ -28,14 +28,17 @@ class BridgeConsumeController extends Controller
 
         // CSRF/account-substitution guard: state must match this browser session.
         abort_unless(
-            hash_equals((string) $request->session()->get('bridge_state', ''), $request->string('state')),
+            hash_equals(
+                (string) $request->session()->get('bridge_state', ''),
+                (string) $request->string('state')
+            ),
             403,
             'Invalid bridge state.'
         );
         $request->session()->forget('bridge_state');
 
         try {
-            $user = $bridge->consumeCode($request->string('code'));
+            $user = $bridge->consumeCode((string) $request->string('code'));
         } catch (RuntimeException $e) {
             if ($e->getMessage() === 'identity-conflict') {
                 return redirect()->route('login')->withErrors([

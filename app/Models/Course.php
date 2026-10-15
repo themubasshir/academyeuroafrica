@@ -41,6 +41,18 @@ class Course extends Model
         return $this->hasMany(TrainerAssignment::class);
     }
 
+    /** @return HasMany<Group, $this> */
+    public function groups(): HasMany
+    {
+        return $this->hasMany(Group::class);
+    }
+
+    /** @return HasMany<LiveSession, $this> */
+    public function liveSessions(): HasMany
+    {
+        return $this->hasMany(LiveSession::class);
+    }
+
     /** @return MorphMany<Material, $this> */
     public function materials(): MorphMany
     {
