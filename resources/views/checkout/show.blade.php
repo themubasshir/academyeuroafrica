@@ -14,11 +14,11 @@
             <form method="POST" action="{{ route('checkout.store', $variant) }}" class="mt-6">
                 @csrf
                 <button type="submit"
-                        class="w-full rounded-lg bg-eamn-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-eamn-800">
-                    Pay {{ $variant->priceFormatted() }}
+                        class="w-full rounded-lg bg-[#ffc439] px-4 py-2.5 text-sm font-semibold text-[#003087] hover:bg-[#f0b429]">
+                    Pay {{ $variant->priceFormatted() }} with PayPal
                 </button>
             </form>
-            <p class="mt-3 text-center text-xs text-gray-400">Secure checkout — you'll be redirected to the payment provider.</p>
+            <p class="mt-3 text-center text-xs text-gray-400">You'll be redirected to PayPal to approve the payment. No card details are stored.</p>
         </div>
     </div>
 @endsection

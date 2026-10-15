@@ -26,7 +26,8 @@ Do **not** run `config:cache` locally — it would bake local/placeholder env in
 ## First deploy
 1. Upload `dist/eamn-academy-<stamp>.tar.gz` via cPanel File Manager/FTP; extract outside docroot.
 2. Point subdomain docroot at `.../eamn-academy/public`.
-3. Create `.env` on host (never shipped): MySQL creds, `APP_KEY`, `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://academy.euroafricamedia.eu`, `JOOMLA_BASE_URL`, `JOOMLA_BRIDGE_SECRET`, `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET`, `PAYMENT_GATEWAY=stripe`, `DEPLOY_ALLOWED_IPS`.
+3. Create `.env` on host (never shipped): MySQL creds, `APP_KEY`, `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://academy.euroafricamedia.eu`, `JOOMLA_BASE_URL`, `JOOMLA_BRIDGE_SECRET`, `DEPLOY_ALLOWED_IPS`, and PayPal:
+   `PAYMENT_GATEWAY=paypal PAYPAL_MODE=live PAYPAL_CLIENT_ID PAYPAL_CLIENT_SECRET PAYPAL_WEBHOOK_ID PAYPAL_CURRENCY=EUR PAYPAL_BRAND_NAME="EAMN Academy"`.
 4. Run one-time migration via the controlled deploy runner (below).
 5. `php artisan config:cache route:cache view:cache` (on host, via the runner or cron one-shot if no SSH).
 6. Verify `/up` health + login flow.
@@ -42,8 +43,21 @@ Do **not** run `config:cache` locally — it would bake local/placeholder env in
 Verify cron support in the panel first.
 
 ## Secrets & gateway safety
-- Test-only payment gateway is gated to `local`/`testing` env (`app()->environment`), and `build.sh` ensures `PAYMENT_GATEWAY=stripe` is present in the shipped template. On prod the test routes are not registered at all.
+- Test-only payment gateway is gated to `local`/`testing` env (`app()->environment`), and `build.sh` injects `PAYMENT_GATEWAY=paypal` in the shipped template. On prod the test routes are not registered at all.
+- PayPal sandbox vs live is selected solely by `PAYPAL_MODE`; sandbox credentials can never reach `api-m.paypal.com` (the mode picks the host).
+- Register a **live** webhook (separate `PAYPAL_WEBHOOK_ID`) on the live PayPal app — sandbox webhook IDs don't verify live events.
 - No dev secrets, `.git`, local `.env`, or test files ship in the tarball.
+
+## PayPal go-live checklist (staging → live)
+1. PayPal Developer → Sandbox REST app → copy Client ID/Secret; create webhook
+   `https://<staging-host>/webhooks/paypal` for `PAYMENT.CAPTURE.*` +
+   `CHECKOUT.ORDER.*`; copy Webhook ID.
+2. Set `PAYPAL_MODE=sandbox` + sandbox creds on staging. Run a real sandbox
+   purchase with a sandbox buyer account; confirm enrolment lands.
+3. For live: create a **live** REST app + live webhook, swap `PAYPAL_MODE=live`
+   and the live creds/Webhook ID. Sandbox IDs don't verify live events.
+4. Refunds: admin-triggered, idempotent (`PayPal-Request-Id`), recorded in
+   `refunds`. Access revocation is a manual admin decision, not automatic.
 
 ## Backup & rollback
 - DB: cPanel/phpMyAdmin export before each release.

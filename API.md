@@ -4,13 +4,22 @@ The app is Livewire-rendered; the only true HTTP APIs are the inbound
 payment-webhook and Joomla-bridge surfaces.
 
 ## Payment webhook
-`POST /webhooks/{gateway}` — `{gateway}` = `stripe` (prod) or `test` (local only).
+`POST /webhooks/{gateway}` — `{gateway}` = `paypal` (prod) or `test` (local only).
 
 - No auth/CSRF; verified per-gateway signature.
-- Stripe: `Stripe-Signature` header, HMAC-SHA256 over `t.payload`, 5-min window.
+- **PayPal**: not HMAC — the academy POSTs the event back to PayPal's
+  `/v1/notifications/verify-webhook-signature` with `PAYPAL-TRANSMISSION-*`
+  headers + `PAYPAL_WEBHOOK_ID`; only `verification_status=SUCCESS` proceeds.
 - Test: `X-Test-Signature`, HMAC-SHA256 over raw body (local adapter only).
 - Response: `200 {"received":true}` · `400 {"error":"invalid signature"}`
 - Idempotent: duplicate `gateway_event_id` is a no-op.
+
+## PayPal browser flow
+- `POST /checkout/{variant}` → creates order + `POST /v2/checkout/orders`
+  (CAPTURE, `PayPal-Request-Id`=order ref) → redirect to approval URL.
+- `GET /checkout/paypal/return?token={pp_order_id}` — owner-verified, captures
+  server-side, fulfils idempotently. Reaching it never grants access alone.
+- `GET /checkout/paypal/cancel?token={pp_order_id}` — order stays pending.
 
 ## Joomla bridge consume
 `GET /auth/bridge/consume?code={64hex}&state={64hex}`

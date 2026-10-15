@@ -3,15 +3,19 @@
 namespace App\Domain\Checkout;
 
 use App\Models\AuditLog;
+use App\Models\CourseVariant;
 use App\Models\Enrolment;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentEvent;
 use App\Models\PaymentTransaction;
+use App\Models\Refund;
 use App\Models\User;
+use App\Services\Payments\Contracts\PaymentGateway;
+use App\Services\Payments\PaymentManager;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use RuntimeException;
 
 /**
  * Order creation and payment fulfilment. Prices are always read from the
@@ -35,7 +39,7 @@ class OrderService
 
             $total = 0;
             foreach ($variantIds as $variantId) {
-                $variant = \App\Models\CourseVariant::with('course')->findOrFail($variantId);
+                $variant = CourseVariant::with('course')->findOrFail($variantId);
                 abort_unless($variant->isPurchasable(), 422, 'Item not purchasable.');
 
                 OrderItem::create([
@@ -60,7 +64,7 @@ class OrderService
      *
      * @return array{order:Order, redirect_url:string}
      */
-    public function beginPayment(Order $order, \App\Services\Payments\Contracts\PaymentGateway $gateway): array
+    public function beginPayment(Order $order, PaymentGateway $gateway): array
     {
         abort_unless($order->status === 'pending', 422, 'Order is not payable.');
 
@@ -94,17 +98,37 @@ class OrderService
                     'type' => $event['type'],
                     'payload' => $event['payload'],
                 ]);
-            } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+            } catch (UniqueConstraintViolationException) {
                 return; // already processed
             }
 
-            if (! in_array($event['type'], ['checkout.session.completed', 'payment.completed', 'test.paid'], true)) {
+            $paidTypes = [
+                'checkout.session.completed', // stripe legacy
+                'payment.completed',           // normalised capture
+                'test.paid',                   // test adapter
+                'PAYMENT.CAPTURE.COMPLETED',   // paypal webhook
+            ];
+            if (! in_array($event['type'], $paidTypes, true)) {
                 PaymentEvent::where('gateway_event_id', $event['event_id'])->update(['processed_at' => now()]);
 
                 return; // not a paid event
             }
 
-            $order = Order::where('reference', $event['order_reference'])->lockForUpdate()->firstOrFail();
+            // Resolve the order: prefer the reference; fall back to the stored
+            // gateway transaction id (paypal webhooks may omit custom_id).
+            $order = null;
+            if (! empty($event['order_reference'])) {
+                $order = Order::where('reference', $event['order_reference'])->lockForUpdate()->first();
+            }
+            if ($order === null && ! empty($event['transaction_id'])) {
+                $txn = PaymentTransaction::where('gateway_transaction_id', $event['transaction_id'])->first();
+                $order = $txn ? Order::lockForUpdate()->find($txn->order_id) : null;
+            }
+            if ($order === null) {
+                PaymentEvent::where('gateway_event_id', $event['event_id'])->update(['processed_at' => now()]);
+
+                return; // unresolvable — recorded for reconciliation
+            }
             if ($order->isPaid()) {
                 PaymentEvent::where('gateway_event_id', $event['event_id'])->update(['processed_at' => now()]);
 
@@ -113,7 +137,14 @@ class OrderService
 
             $txn = PaymentTransaction::where('gateway_transaction_id', $event['transaction_id'])
                 ->orWhere('order_id', $order->id)->latest()->first();
-            $txn?->update(['status' => 'paid', 'metadata' => ['event_id' => $event['event_id']]]);
+            $txn?->update([
+                'status' => 'paid',
+                'metadata' => array_merge($txn->metadata ?? [], [
+                    'event_id' => $event['event_id'],
+                    // capture id for refunds — for paypal event_id is the capture id
+                    'capture_id' => $event['capture_id'] ?? $event['event_id'],
+                ]),
+            ]);
 
             $order->update(['status' => 'paid']);
 
@@ -126,6 +157,49 @@ class OrderService
 
             PaymentEvent::where('gateway_event_id', $event['event_id'])->update(['processed_at' => now()]);
             AuditLog::record('order.paid', $order, ['gateway' => $gatewayName, 'event' => $event['event_id']]);
+        });
+    }
+
+    /**
+     * Refund a paid order via its gateway. Admin-authorised at the caller.
+     * Enforces amount bounds, prior refunds and records the refund row.
+     * Access revocation is a separate admin decision — never auto-revoked here.
+     */
+    public function refund(Order $order, User $admin, int $amountCents, ?string $reason = null): Refund
+    {
+        abort_unless($order->isPaid(), 422, 'Order is not paid.');
+
+        return DB::transaction(function () use ($order, $admin, $amountCents, $reason) {
+            $txn = PaymentTransaction::where('order_id', $order->id)
+                ->where('status', 'paid')->lockForUpdate()->firstOrFail();
+
+            $alreadyRefunded = Refund::where('payment_transaction_id', $txn->id)
+                ->where('status', 'completed')->sum('amount_cents');
+
+            abort_if($amountCents <= 0, 422, 'Invalid refund amount.');
+            abort_if($alreadyRefunded + $amountCents > $txn->amount_cents, 422, 'Refund exceeds paid amount.');
+
+            $captureId = $txn->metadata['capture_id'] ?? $txn->gateway_transaction_id;
+            $idempotencyKey = 'refund:'.$txn->id.':'.$amountCents.':'.$alreadyRefunded;
+
+            $gateway = app(PaymentManager::class)->driver($txn->gateway);
+            $response = $gateway->refundCapture($captureId, $amountCents, $txn->currency, $idempotencyKey);
+
+            $refund = Refund::create([
+                'payment_transaction_id' => $txn->id,
+                'amount_cents' => $amountCents,
+                'reason' => $reason,
+                'status' => ($response['status'] ?? 'COMPLETED') === 'COMPLETED' ? 'completed' : 'pending',
+                'processed_by' => $admin->id,
+            ]);
+
+            AuditLog::record('order.refund', $order, [
+                'refund_id' => $response['id'] ?? null,
+                'amount' => $amountCents,
+                'by' => $admin->id,
+            ]);
+
+            return $refund;
         });
     }
 }

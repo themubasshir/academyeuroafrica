@@ -10,7 +10,8 @@ class Integrations extends Component
     {
         return view('livewire.admin.integrations', [
             'joomlaConfigured' => (bool) config('services.joomla.bridge_secret'),
-            'stripeConfigured' => (bool) config('services.stripe.secret'),
+            'paypalConfigured' => (bool) config('services.paypal.client_id'),
+            'paypalMode' => config('services.paypal.mode', 'sandbox'),
             'gateway' => config('services.payments.default'),
             'mappings' => \DB::table('joomla_page_mappings')->get(),
         ])->layout('layouts::app', ['title' => 'Integrations']);

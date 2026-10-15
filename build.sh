@@ -44,7 +44,7 @@ echo "==> Sanitise: no secrets, no dev gateway flag"
 find "$STAGE" -name '.env*' ! -name '.env.production.example' -delete
 # Ensure test-only gateway cannot be selected: PAYMENT_GATEWAY must be set on host.
 grep -q 'PAYMENT_GATEWAY' "$STAGE/.env.production.example" || \
-    echo 'PAYMENT_GATEWAY=stripe' >> "$STAGE/.env.production.example"
+    echo 'PAYMENT_GATEWAY=paypal' >> "$STAGE/.env.production.example"
 
 echo "==> Package"
 tar -czf "$ARCHIVE" -C "$(dirname "$STAGE")" "$APP"

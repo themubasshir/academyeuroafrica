@@ -2,6 +2,34 @@
 
 All phases committed to `main`. Dates reflect commit history.
 
+## Phase 10 — PayPal replaces Stripe (2026-10-15)
+
+### Implemented
+- **`PayPalGateway`** (`Services\Payments\Gateways`) — REST Orders v2, CAPTURE
+  intent, OAuth2 client-credentials token, `PayPal-Request-Id` idempotency on
+  order create/capture/refund, amount+currency+reference+capture validation.
+- **Checkout flow** — `POST /v2/checkout/orders` → approval redirect;
+  `GET checkout/paypal/return?token=` captures server-side + fulfils;
+  `checkout/paypal/cancel` leaves order pending. Browser return never grants
+  access on its own.
+- **Webhooks** — `POST /webhooks/paypal` verified via PayPal's
+  `verify-webhook-signature` endpoint (transmission headers + `PAYPAL_WEBHOOK_ID`),
+  not HMAC. Idempotent via `payment_events` unique index; resolves order by
+  `custom_id` or stored transaction id.
+- **Refunds** — `OrderService::refund` via `POST /v2/payments/captures/{id}/refund`,
+  amount-bounded, prior-refund-aware, idempotent; admin-authorised.
+- **Config** — `PAYMENT_GATEWAY=paypal` default; `PAYPAL_MODE` picks sandbox
+  vs live host (sandbox creds can never hit live URL). `stripe` removed from
+  active gateway map; `test` adapter still local-only.
+- **Tests** — `PayPalGatewayTest` (20): token, bad creds, order create,
+  approval URL, cancel, capture COMPLETED/PENDING/DENIED, amount/currency/
+  reference mismatch, unknown order, duplicate capture, webhook verify +
+  repeated + bad signature + missing headers, return/webhook race, enrolment
+  + dedupe, refund ok/fail, cross-user order 403, sandbox/live host safety.
+
+### Removed
+- `StripeGateway` from active registration (file deleted; git retains history).
+
 ## Phase 9 — Functional completion & integration hardening (2026-10-15)
 
 ### Implemented

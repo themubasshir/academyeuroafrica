@@ -41,3 +41,23 @@ php artisan test
 ## Joomla bridge
 Plugin source in `joomla/eamn-academy-bridge/` → packaged `com_eamnbridge.zip`.
 See `JOOMLA_INTEGRATION.md`.
+
+## Payments — PayPal (Phase 10)
+PayPal Checkout (REST Orders v2, CAPTURE) is the active gateway.
+
+| Env var | Purpose |
+|---|---|
+| `PAYMENT_GATEWAY` | `paypal` (default) |
+| `PAYPAL_MODE` | `sandbox` (dev/test) or `live` |
+| `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | REST app credentials |
+| `PAYPAL_WEBHOOK_ID` | for webhook verification |
+| `PAYPAL_CURRENCY` | default `EUR` — order's own currency is authoritative |
+| `PAYPAL_BRAND_NAME` | shown on PayPal approval page |
+
+Setup: PayPal Developer → create a **Sandbox REST app** → copy Client ID +
+Secret → create a **webhook** pointing at
+`https://<host>/webhooks/paypal` for `PAYMENT.CAPTURE.*`/`CHECKOUT.ORDER.*`
+events → copy the Webhook ID into `PAYPAL_WEBHOOK_ID`. Never commit secrets;
+sandbox creds never reach the live base URL.
+
+Full setup/test/switch-to-live guide: `DEPLOYMENT_INTERSERVER.md` + `TESTING.md`.

@@ -3,6 +3,7 @@
 namespace App\Services\Payments\Contracts;
 
 use App\Models\Order;
+use App\Services\Payments\InvalidWebhookSignature;
 use Illuminate\Http\Request;
 
 /**
@@ -27,10 +28,25 @@ interface PaymentGateway
      *
      * @return array{event_id:string, type:string, transaction_id:?string, order_reference:?string, payload:array}
      *
-     * @throws \App\Services\Payments\InvalidWebhookSignature
+     * @throws InvalidWebhookSignature
      */
     public function verifyWebhook(Request $request): array;
 
     /** Whether this gateway is a real production provider (not the test adapter). */
     public function isLive(): bool;
+
+    /**
+     * Capture a previously-created provider order server-side and return a
+     * normalised fulfilment event (type 'payment.completed').
+     *
+     * @return array{event_id:string, type:string, transaction_id:?string, order_reference:?string, payload:array}
+     */
+    public function captureOrder(string $providerOrderId, Order $order): array;
+
+    /**
+     * Refund a completed capture. Idempotent via $idempotencyKey.
+     *
+     * @return array{id?:string, status?:string}
+     */
+    public function refundCapture(string $captureId, int $amountCents, string $currency, string $idempotencyKey): array;
 }

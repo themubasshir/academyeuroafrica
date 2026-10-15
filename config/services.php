@@ -36,12 +36,17 @@ return [
     ],
 
     'payments' => [
-        'default' => env('PAYMENT_GATEWAY', 'stripe'),
+        'default' => env('PAYMENT_GATEWAY', 'paypal'),
     ],
 
-    'stripe' => [
-        'secret' => env('STRIPE_SECRET'),
-        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    'paypal' => [
+        // sandbox → api-m.sandbox.paypal.com ; live → api-m.paypal.com
+        'mode' => env('PAYPAL_MODE', 'sandbox'),
+        'client_id' => env('PAYPAL_CLIENT_ID'),
+        'client_secret' => env('PAYPAL_CLIENT_SECRET'),
+        'webhook_id' => env('PAYPAL_WEBHOOK_ID'),
+        'currency' => env('PAYPAL_CURRENCY', 'EUR'),
+        'brand_name' => env('PAYPAL_BRAND_NAME', 'EAMN Academy'),
     ],
 
     // Local/test adapter only — never used in production.

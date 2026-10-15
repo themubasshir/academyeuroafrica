@@ -10,9 +10,12 @@
 - `super-admin` gets `Gate::before` allow-all; everything else denied by default.
 - IDOR: policies + scoped queries; cross-student access attempts covered by tests.
 
-## Payments (Phase 3)
-- Server-side totals from `course_variants`. Browser success URL never grants access — only verified webhook fulfilment does.
-- `payment_events.provider_event_id` unique → idempotent processing. Signatures verified per-gateway. No card data stored.
+## Payments (PayPal, Phase 10)
+- Server-side totals from `course_variants`. Browser return/cancel never grants access — only a verified capture or verified webhook does.
+- `payment_events(gateway, gateway_event_id)` unique → idempotent fulfilment; `enrolments(user,variant)` unique → no duplicate access.
+- Webhook authenticity via PayPal `verify-webhook-signature` (never HMAC-with-secret). Capture integrity checked: status COMPLETED, amount, currency, order reference, capture id.
+- `PayPal-Request-Id` idempotency on order create/capture/refund. `PAYPAL_CLIENT_SECRET` server-side only, never in browser or bundle.
+- Sandbox credentials can never reach the live base URL (mode selects the host).
 
 ## Files
 - Uploads → private disk, randomised names, MIME+size validation. Served only via controller after auth check. Never placed under public web root; PHP execution impossible.

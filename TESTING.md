@@ -17,6 +17,7 @@
 | `tests/Feature/StudentWorkspaceTest` | workspace auth, cross-student 403, lesson `markComplete` |
 | `tests/Feature/FileAuthorizationTest` | enrolled download, non-enrolled 403, guest redirect, MIME allowlist |
 | `tests/Feature/TrainerManageTest` | module/lesson save, unassigned-trainer 403, quiz question create, availability add |
+| `tests/Feature/Payments/PayPalGatewayTest` | PayPal Orders v2 — token, order create, approval, capture validate (amount/currency/ref), pending/denied, webhook verify + idempotency + bad sig, race, enrolment dedupe, refund, cross-user 403, sandbox/live host |
 | *(Phases 2–8 suites)* | enrolment unique, webhook idempotency, IDOR policies, quiz engine, double-booking, credit ledger, refund, deploy runner, security headers |
 
 ## Still to add / live-verify

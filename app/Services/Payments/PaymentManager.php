@@ -3,7 +3,7 @@
 namespace App\Services\Payments;
 
 use App\Services\Payments\Contracts\PaymentGateway;
-use App\Services\Payments\Gateways\StripeGateway;
+use App\Services\Payments\Gateways\PayPalGateway;
 use App\Services\Payments\Gateways\TestGateway;
 use RuntimeException;
 
@@ -12,7 +12,7 @@ class PaymentManager
     /** @return array<string, PaymentGateway> */
     public function gateways(): array
     {
-        $gateways = ['stripe' => new StripeGateway];
+        $gateways = ['paypal' => new PayPalGateway];
 
         if (app()->environment(['local', 'testing'])) {
             $gateways['test'] = new TestGateway;
@@ -23,7 +23,7 @@ class PaymentManager
 
     public function driver(?string $name = null): PaymentGateway
     {
-        $name ??= config('services.payments.default', 'stripe');
+        $name ??= config('services.payments.default', 'paypal');
         $gateway = $this->gateways()[$name]
             ?? throw new RuntimeException("Unknown payment gateway: {$name}");
 

@@ -61,6 +61,11 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->name('checkout.success');
     Route::get('checkout/cancelled', [CheckoutController::class, 'cancelled'])
         ->name('checkout.cancelled');
+    // PayPal browser return/cancel — captures server-side before showing status
+    Route::get('checkout/paypal/return', [CheckoutController::class, 'paypalReturn'])
+        ->name('checkout.paypal.return');
+    Route::get('checkout/paypal/cancel', [CheckoutController::class, 'paypalCancel'])
+        ->name('checkout.paypal.cancel');
     Route::get('checkout/{variant}', [CheckoutController::class, 'show'])
         ->name('checkout.show');
     Route::post('checkout/{variant}', [CheckoutController::class, 'store'])

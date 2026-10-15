@@ -6,7 +6,6 @@ use App\Models\Order;
 use App\Services\Payments\Contracts\PaymentGateway;
 use App\Services\Payments\InvalidWebhookSignature;
 use Illuminate\Http\Request;
-use RuntimeException;
 
 /**
  * Development/test adapter ONLY. Registered exclusively when APP_ENV is
@@ -54,5 +53,22 @@ class TestGateway implements PaymentGateway
             'order_reference' => $data['order_reference'] ?? null,
             'payload' => $data,
         ];
+    }
+
+    public function captureOrder(string $providerOrderId, Order $order): array
+    {
+        // Simulates a completed capture for local checkout flows.
+        return [
+            'event_id' => 'test_capture_'.$providerOrderId,
+            'type' => 'payment.completed',
+            'transaction_id' => $providerOrderId,
+            'order_reference' => $order->reference,
+            'payload' => ['simulated' => true],
+        ];
+    }
+
+    public function refundCapture(string $captureId, int $amountCents, string $currency, string $idempotencyKey): array
+    {
+        return ['id' => 'test_refund_'.$captureId, 'status' => 'COMPLETED'];
     }
 }

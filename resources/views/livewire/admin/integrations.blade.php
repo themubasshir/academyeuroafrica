@@ -11,8 +11,8 @@
         </div>
         <div class="rounded-xl border border-gray-200 bg-white p-5">
             <h2 class="font-semibold">Payments</h2>
-            <p class="mt-1 text-sm {{ $stripeConfigured ? 'text-green-600' : 'text-amber-600' }}">
-                {{ $stripeConfigured ? 'Stripe configured' : 'Stripe not configured' }} · default: {{ $gateway }}
+            <p class="mt-1 text-sm {{ $paypalConfigured ? 'text-green-600' : 'text-amber-600' }}">
+                {{ $paypalConfigured ? 'PayPal configured' : 'PayPal not configured' }} · {{ $paypalMode }} · default: {{ $gateway }}
             </p>
         </div>
     </div>
