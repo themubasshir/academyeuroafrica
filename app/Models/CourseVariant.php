@@ -8,7 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['course_id', 'name', 'delivery_type', 'price_cents', 'currency', 'capacity', 'status'])]
+#[Fillable([
+    'course_id', 'name', 'delivery_type', 'price_cents', 'currency', 'capacity',
+    'status', 'source_key', 'approval_status', 'duration', 'inclusions',
+    'price_source', 'checkout_ref',
+])]
 class CourseVariant extends Model
 {
     use HasFactory;
@@ -25,13 +29,24 @@ class CourseVariant extends Model
         return $this->hasMany(Enrolment::class);
     }
 
-    public function isPurchasable(): bool
-    {
-        return $this->status === 'published' && $this->course->isPublished();
-    }
-
     public function priceFormatted(): string
     {
-        return number_format($this->price_cents / 100, 2).' '.$this->currency;
+        return $this->price_cents === null
+            ? 'Price on application'
+            : number_format($this->price_cents / 100, 2).' '.$this->currency;
+    }
+
+    /** Purchasable only when approved AND published. */
+    public function isPurchasable(): bool
+    {
+        return $this->status === 'published'
+            && $this->approval_status === 'approved'
+            && $this->price_cents !== null
+            && $this->course->isPublished();
+    }
+
+    protected function casts(): array
+    {
+        return ['inclusions' => 'array'];
     }
 }

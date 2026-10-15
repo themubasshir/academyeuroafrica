@@ -162,6 +162,7 @@ Route::middleware(['auth', 'active', 'role:super-admin,academy-admin'])
         Route::livewire('dashboard', 'admin.dashboard')->name('dashboard');
         Route::livewire('programmes', 'admin.programmes')->name('programmes');
         Route::livewire('courses', 'admin.courses')->name('courses');
+        Route::livewire('packages', 'admin.variants')->name('variants');
         Route::livewire('users', 'admin.users')->name('users');
         Route::livewire('orders', 'admin.orders')->name('orders');
         Route::livewire('enrolments', 'admin.enrolments')->name('enrolments');

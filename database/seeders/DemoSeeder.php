@@ -6,6 +6,7 @@ use App\Models\Announcement;
 use App\Models\Assignment;
 use App\Models\AssignmentGrade;
 use App\Models\AssignmentSubmission;
+use App\Models\CertificationPolicy;
 use App\Models\Course;
 use App\Models\CourseModule;
 use App\Models\CourseVariant;
@@ -200,7 +201,7 @@ class DemoSeeder extends Seeder
         ]);
 
         // Certification policy on the Radio course ---------------------------
-        \App\Models\CertificationPolicy::firstOrCreate(['course_id' => $radio->id], [
+        CertificationPolicy::firstOrCreate(['course_id' => $radio->id], [
             'enabled' => true,
             'require_lessons' => true,
             'require_quizzes' => true,

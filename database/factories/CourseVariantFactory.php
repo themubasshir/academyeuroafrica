@@ -18,6 +18,7 @@ class CourseVariantFactory extends Factory
             'price_cents' => fake()->numberBetween(5000, 50000),
             'currency' => 'EUR',
             'status' => 'published',
+            'approval_status' => 'approved', // factory represents a sellable variant
         ];
     }
 }
