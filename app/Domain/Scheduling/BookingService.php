@@ -3,12 +3,12 @@
 namespace App\Domain\Scheduling;
 
 use App\Models\Appointment;
+use App\Models\AuditLog;
 use App\Models\SessionCreditLedger;
 use App\Models\TrainerAvailability;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 /**
  * Private-training bookings. Transaction-safe: availability + overlap checks
@@ -62,7 +62,7 @@ class BookingService
                 'reason' => 'booking',
             ]);
 
-            \App\Models\AuditLog::record('appointment.booked', $appointment);
+            AuditLog::record('appointment.booked', $appointment);
 
             return $appointment;
         });
@@ -91,7 +91,7 @@ class BookingService
                 ]);
             }
 
-            \App\Models\AuditLog::record('appointment.cancelled', $appointment, ['by' => $by->id]);
+            AuditLog::record('appointment.cancelled', $appointment, ['by' => $by->id]);
 
             return $appointment;
         });

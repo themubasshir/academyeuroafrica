@@ -2,12 +2,12 @@
 
 namespace App\Domain\Assessment;
 
+use App\Models\Enrolment;
 use App\Models\Quiz;
 use App\Models\QuizAnswer;
 use App\Models\QuizAttempt;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 /**
  * Server-side quiz engine: timing, attempt limits, auto-grading, result release.
@@ -131,7 +131,7 @@ class QuizService
 
     private function enrolled(Quiz $quiz, User $user): bool
     {
-        return \App\Models\Enrolment::where('user_id', $user->id)
+        return Enrolment::where('user_id', $user->id)
             ->where('status', 'active')
             ->whereHas('variant', fn ($q) => $q->where('course_id', $quiz->course_id))
             ->exists();

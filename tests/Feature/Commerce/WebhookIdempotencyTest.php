@@ -3,6 +3,7 @@
 namespace Tests\Feature\Commerce;
 
 use App\Domain\Checkout\OrderService;
+use App\Models\CourseVariant;
 use App\Models\Enrolment;
 use App\Models\Order;
 use App\Models\User;
@@ -26,7 +27,8 @@ class WebhookIdempotencyTest extends TestCase
 
     private function makeOrder(User $user): Order
     {
-        $variant = \App\Models\CourseVariant::factory()->create(['price_cents' => 9900]);
+        $variant = CourseVariant::factory()->create(['price_cents' => 9900]);
+
         return (new OrderService)->create($user, [$variant->id]);
     }
 

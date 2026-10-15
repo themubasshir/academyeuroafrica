@@ -9,13 +9,14 @@ use App\Http\Controllers\Deploy\MigrateRunnerController;
 use App\Http\Controllers\Files\MaterialController;
 use App\Http\Controllers\Webhooks\PaymentWebhookController;
 use App\Models\Order;
+use App\Models\Programme;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 Route::get('/', fn () => view('welcome', [
-    'programmes' => \App\Models\Programme::where('status', 'published')->withCount('courses')->get(),
+    'programmes' => Programme::where('status', 'published')->withCount('courses')->get(),
 ]))->name('home');
 
 // Public catalogue

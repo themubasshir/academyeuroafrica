@@ -7,6 +7,7 @@ use App\Models\SessionCreditLedger;
 use App\Models\TrainerAvailability;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class BookingTest extends TestCase
@@ -51,7 +52,7 @@ class BookingTest extends TestCase
         [$trainer, $start] = $this->trainerWithSlot();
         $student = User::factory()->student()->create();
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         $this->service->book($student, $trainer, $start);
     }
 
@@ -61,7 +62,7 @@ class BookingTest extends TestCase
         $student = User::factory()->student()->create();
         $this->service->grantCredits($student, 1);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         $this->service->book($student, $trainer, now()->addDays(9));
     }
 
@@ -75,7 +76,7 @@ class BookingTest extends TestCase
 
         $this->service->book($s1, $trainer, $start);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         $this->service->book($s2, $trainer, $start);
     }
 

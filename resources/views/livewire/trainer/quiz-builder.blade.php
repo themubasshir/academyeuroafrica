@@ -42,9 +42,9 @@
                         <p class="text-xs text-gray-500">{{ strtoupper($q->type) }} · {{ $q->points }}pt · {{ $q->options->count() }} options</p>
                     </div>
                     <span class="flex gap-1">
-                        <button wire:click="moveQuestion({{ $q->id }}, 'up')" class="px-1 text-gray-500">↑</button>
-                        <button wire:click="moveQuestion({{ $q->id }}, 'down')" class="px-1 text-gray-500">↓</button>
-                        <button wire:click="deleteQuestion({{ $q->id }})" class="px-1 text-red-600">✕</button>
+                        <button wire:click="moveQuestion({{ $q->id }}, 'up')" class="min-h-7 min-w-7 rounded px-1.5 py-0.5 text-gray-500 hover:bg-gray-200" aria-label="Move question up">↑</button>
+                        <button wire:click="moveQuestion({{ $q->id }}, 'down')" class="min-h-7 min-w-7 rounded px-1.5 py-0.5 text-gray-500 hover:bg-gray-200" aria-label="Move question down">↓</button>
+                        <button wire:click="deleteQuestion({{ $q->id }})" class="min-h-7 min-w-7 rounded px-1.5 py-0.5 text-red-600 hover:bg-red-50" aria-label="Delete question">✕</button>
                     </span>
                 </li>
             @empty

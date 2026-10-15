@@ -6,6 +6,7 @@ use App\Domain\Checkout\OrderService;
 use App\Models\CourseVariant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class OrderServiceTest extends TestCase
@@ -30,7 +31,7 @@ class OrderServiceTest extends TestCase
         $user = User::factory()->student()->create();
         $variant = CourseVariant::factory()->create(['status' => 'draft']);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         (new OrderService)->create($user, [$variant->id]);
     }
 }

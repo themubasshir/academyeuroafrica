@@ -8,6 +8,7 @@ use App\Models\CourseModule;
 use App\Models\CourseVariant;
 use App\Models\Enrolment;
 use App\Models\Lesson;
+use App\Models\Programme;
 use App\Models\Quiz;
 use App\Models\TrainerAssignment;
 use App\Models\User;
@@ -151,7 +152,7 @@ class RenderSmokeTest extends TestCase
 
     public function test_home_lists_published_programmes(): void
     {
-        \App\Models\Programme::create(['name' => 'Public Prog', 'slug' => 'public-prog', 'status' => 'published']);
+        Programme::create(['name' => 'Public Prog', 'slug' => 'public-prog', 'status' => 'published']);
         $this->get(route('home'))->assertOk()->assertSee('Public Prog');
     }
 

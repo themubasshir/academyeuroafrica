@@ -3,6 +3,7 @@
 namespace Tests\Feature\Assessment;
 
 use App\Domain\Assessment\QuizService;
+use App\Models\CourseVariant;
 use App\Models\Enrolment;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
@@ -10,6 +11,7 @@ use App\Models\QuizOption;
 use App\Models\QuizQuestion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class QuizEngineTest extends TestCase
@@ -29,7 +31,7 @@ class QuizEngineTest extends TestCase
         $student = User::factory()->student()->create();
         Enrolment::factory()->create([
             'user_id' => $student->id,
-            'course_variant_id' => \App\Models\CourseVariant::factory()->for($quiz->course)->create()->id,
+            'course_variant_id' => CourseVariant::factory()->for($quiz->course)->create()->id,
         ]);
 
         return $student;
@@ -40,7 +42,7 @@ class QuizEngineTest extends TestCase
         $quiz = Quiz::factory()->create();
         $student = User::factory()->student()->create();
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         $this->service->startAttempt($quiz, $student);
     }
 
@@ -52,7 +54,7 @@ class QuizEngineTest extends TestCase
         $attempt = $this->service->startAttempt($quiz, $student);
         $this->service->submit($attempt);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         $this->service->startAttempt($quiz, $student);
     }
 
@@ -111,7 +113,7 @@ class QuizEngineTest extends TestCase
         ]);
 
         $this->assertTrue($attempt->isExpired());
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         $this->service->answer($attempt, 1, []);
     }
 
@@ -122,7 +124,7 @@ class QuizEngineTest extends TestCase
         $inQuiz = QuizQuestion::factory()->for($quiz)->create();
         $attempt = $this->service->startAttempt($quiz, $student);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         $this->service->answer($attempt, 999999, []);
     }
 }

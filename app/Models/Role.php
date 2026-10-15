@@ -10,8 +10,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Role extends Model
 {
     public const SUPER_ADMIN = 'super-admin';
+
     public const ACADEMY_ADMIN = 'academy-admin';
+
     public const TRAINER = 'trainer';
+
     public const STUDENT = 'student';
 
     /** @return BelongsToMany<Permission, $this> */

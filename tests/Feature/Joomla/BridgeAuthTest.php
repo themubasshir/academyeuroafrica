@@ -35,6 +35,7 @@ class BridgeAuthTest extends TestCase
             '*' => function ($request) {
                 $this->assertNotEmpty($request->header('X-EAMN-Signature'));
                 $this->assertNotEmpty($request->header('X-EAMN-Timestamp'));
+
                 return Http::response(['sub' => '1', 'email' => 'e@e.e', 'name' => 'N']);
             },
         ]);

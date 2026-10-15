@@ -13,7 +13,7 @@
                 <div class="flex items-center justify-between">
                     <h2 class="font-semibold">Modules & lessons</h2>
                     <form wire:submit="saveModule" class="flex gap-2">
-                        <input wire:model="moduleTitle" placeholder="New module title"
+                        <input wire:model="moduleTitle" placeholder="New module title" aria-label="New module title"
                                class="input">
                         <button class="btn-primary btn-sm">+ Module</button>
                     </form>
@@ -25,10 +25,10 @@
                             <div class="flex items-center justify-between bg-gray-50 px-4 py-2">
                                 <span class="font-medium text-sm">{{ $module->title }}</span>
                                 <span class="flex gap-1">
-                                    <button wire:click="moveModule({{ $module->id }}, 'up')" class="px-1 text-gray-500" title="Move up">↑</button>
-                                    <button wire:click="moveModule({{ $module->id }}, 'down')" class="px-1 text-gray-500" title="Move down">↓</button>
-                                    <button wire:click="editLesson(null, {{ $module->id }})" class="px-1 text-eamn-700" title="Add lesson">+</button>
-                                    <button wire:click="deleteModule({{ $module->id }})" wire:confirm="Delete module?" class="px-1 text-red-600">✕</button>
+                                    <button wire:click="moveModule({{ $module->id }}, 'up')" class="min-h-7 min-w-7 rounded px-1.5 py-0.5 text-gray-500 hover:bg-gray-200" aria-label="Move module up">↑</button>
+                                    <button wire:click="moveModule({{ $module->id }}, 'down')" class="min-h-7 min-w-7 rounded px-1.5 py-0.5 text-gray-500 hover:bg-gray-200" aria-label="Move module down">↓</button>
+                                    <button wire:click="editLesson(null, {{ $module->id }})" class="min-h-7 min-w-7 rounded px-1.5 py-0.5 text-eamn-700 hover:bg-eamn-100" aria-label="Add lesson">+</button>
+                                    <button wire:click="deleteModule({{ $module->id }})" wire:confirm="Delete module?" class="min-h-7 min-w-7 rounded px-1.5 py-0.5 text-red-600 hover:bg-red-50" aria-label="Delete module">✕</button>
                                 </span>
                             </div>
                             <ul class="divide-y divide-gray-100">
@@ -53,15 +53,15 @@
                 <section class="rounded-xl border border-eamn-200 bg-eamn-50 p-5">
                     <h3 class="font-semibold">{{ $editingLessonId ? 'Edit lesson' : 'New lesson' }}</h3>
                     <div class="mt-3 space-y-3">
-                        <input wire:model="lessonTitle" placeholder="Lesson title" class="block w-full input">
-                        <select wire:model.live="lessonType" class="block w-full input">
+                        <input wire:model="lessonTitle" placeholder="Lesson title" aria-label="Lesson title" class="block w-full input">
+                        <select wire:model.live="lessonType" aria-label="Lesson type" class="block w-full input">
                             <option value="text">Text</option>
                             <option value="video">Video</option>
                         </select>
                         @if ($lessonType === 'video')
-                            <input wire:model="videoId" placeholder="Video ID (YouTube/Vimeo/embed URL)" class="block w-full input">
+                            <input wire:model="videoId" placeholder="Video ID (YouTube/Vimeo/embed URL)" aria-label="Video ID" class="block w-full input">
                         @endif
-                        <textarea wire:model="lessonContent" rows="4" placeholder="Content" class="block w-full input"></textarea>
+                        <textarea wire:model="lessonContent" rows="4" placeholder="Content" aria-label="Lesson content" class="block w-full input"></textarea>
                         <div class="flex gap-2">
                             <button wire:click="saveLesson" class="btn-primary">Save lesson</button>
                             <button wire:click="$set('attachModuleId', null)" class="rounded-lg px-4 py-2 text-sm text-gray-600">Cancel</button>
@@ -74,11 +74,11 @@
         <section class="card-pad">
             <h2 class="font-semibold">Materials</h2>
             <form wire:submit="uploadMaterial" class="mt-3 space-y-3">
-                <select wire:model="attachModuleId" class="block w-full input">
+                <select wire:model="attachModuleId" aria-label="Attach material to" class="block w-full input">
                     <option value="">Whole course</option>
                     @foreach ($modules as $m)<option value="{{ $m->id }}">Module: {{ $m->title }}</option>@endforeach
                 </select>
-                <input type="file" wire:model="materialUpload" class="block w-full text-sm">
+                <input type="file" wire:model="materialUpload" aria-label="Upload material" class="block w-full text-sm">
                 @error('materialUpload')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
                 <button class="btn-primary">Upload</button>
             </form>

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Classroom;
 
+use App\Models\CourseVariant;
 use App\Models\Enrolment;
 use App\Models\Group;
 use App\Models\GroupMember;
@@ -29,7 +30,7 @@ class LiveSessionAccessTest extends TestCase
         $student = User::factory()->student()->create();
         Enrolment::factory()->create([
             'user_id' => $student->id,
-            'course_variant_id' => \App\Models\CourseVariant::factory()
+            'course_variant_id' => CourseVariant::factory()
                 ->for($session->course)->create()->id,
         ]);
 

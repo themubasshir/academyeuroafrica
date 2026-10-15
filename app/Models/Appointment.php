@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 
 #[Fillable([
@@ -37,7 +38,7 @@ class Appointment extends Model
         );
     }
 
-    public function endsAt(): \Illuminate\Support\Carbon
+    public function endsAt(): Carbon
     {
         return $this->starts_at->copy()->addMinutes($this->duration_minutes);
     }

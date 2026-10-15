@@ -14,9 +14,13 @@ class QuizQuestion extends Model
     use HasFactory;
 
     public const TYPE_MCQ = 'mcq';
+
     public const TYPE_MULTI = 'multi';
+
     public const TYPE_TF = 'tf';
+
     public const TYPE_SHORT = 'short';
+
     public const TYPE_ESSAY = 'essay';
 
     public const AUTO_GRADED = [self::TYPE_MCQ, self::TYPE_MULTI, self::TYPE_TF, self::TYPE_SHORT];

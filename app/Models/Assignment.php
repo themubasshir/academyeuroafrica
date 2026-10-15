@@ -54,7 +54,7 @@ class Assignment extends Model
     public function isRecipient(User $user): bool
     {
         return match ($this->audience) {
-            'students' => \App\Models\AssignmentRecipient::where('assignment_id', $this->id)
+            'students' => AssignmentRecipient::where('assignment_id', $this->id)
                 ->where('user_id', $user->id)->exists(),
             'group' => $this->group !== null
                 && GroupMember::where('group_id', $this->group_id)->where('user_id', $user->id)->exists(),
