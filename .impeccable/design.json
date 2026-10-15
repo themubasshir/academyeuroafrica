@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-15T00:00:00Z",
+  "title": "Design System: EAMN Academy",
+  "extensions": {
+    "colorMeta": {
+      "reg-700":   { "role": "primary",   "displayName": "Registry Blue",     "canonical": "#0345bf", "tonalRamp": ["#021f58", "#032f85", "#0345bf", "#1450d6", "#2f6ae0", "#6f9aec", "#b5cdf5", "#eff4fd"] },
+      "navy-800":  { "role": "secondary", "displayName": "EuroAfrica Navy",   "canonical": "#08355c", "tonalRamp": ["#081c33", "#0c2b4c", "#08355c", "#103a63", "#0f4a7e", "#155e9e", "#1f77bd", "#d7e7f5"] },
+      "seal-500":  { "role": "tertiary",  "displayName": "Seal Gold",         "canonical": "#c8a24a", "tonalRamp": ["#5f4718", "#8a6524", "#a97e2f", "#c8a24a", "#d8b96a", "#e6cf93", "#f4ead0", "#faf4e4"] },
+      "paper-50":  { "role": "neutral",   "displayName": "Ivory Paper",       "canonical": "#faf8f3", "tonalRamp": ["#6b685f", "#8f8c82", "#b8b4a7", "#d9d2c0", "#e9e4d7", "#f4f1e9", "#faf8f3", "#ffffff"] },
+      "ink-950":   { "role": "neutral",   "displayName": "Register Ink",      "canonical": "#131a24", "tonalRamp": ["#131a24", "#1c2431", "#263145", "#33415c", "#4c4a44", "#6b685f", "#8f8c82", "#c9c6bc"] }
+    },
+    "typographyMeta": {
+      "display":  { "displayName": "Display",  "purpose": "Page titles only — the register's engraved title page." },
+      "headline": { "displayName": "Headline", "purpose": "Card and section titles." },
+      "body":     { "displayName": "Body",     "purpose": "Default reading size, records and prose." },
+      "label":    { "displayName": "Register Label", "purpose": "Spaced small-caps surface titles (.register), always with a hairline rule." }
+    },
+    "shadows": [
+      { "name": "card-rest",  "value": "0 1px 2px rgba(19,26,36,0.05)",  "purpose": "Whisper separation between white cards and paper ground." },
+      { "name": "panel-lift", "value": "0 20px 50px rgba(4,16,32,0.5)", "purpose": "Login/entry panels over the navy field — the only theatrical shadow." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "transition (Tailwind default, 150ms)", "purpose": "All hover/state color transitions; duration collapses to 0 under prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Registry-blue action — the pen that writes in the register. One per visible group.",
+      "html": "<button class=\"ds-btn-primary\">Sign in with EuroAfrica</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:6px; padding:10px 16px; font-size:14px; font-weight:600; font-family:'Instrument Sans',ui-sans-serif,system-ui,sans-serif; background:#0345bf; color:#fff; border:none; cursor:pointer; transition:background .15s; } .ds-btn-primary:hover { background:#1450d6; } .ds-btn-primary:active { background:#0c2b4c; } .ds-btn-primary:focus-visible { outline:2px solid #1450d6; outline-offset:2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Quiet paperwork action — white sheet with hairline border.",
+      "html": "<button class=\"ds-btn-secondary\">Save draft</button>",
+      "css": ".ds-btn-secondary { display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:6px; padding:10px 16px; font-size:14px; font-weight:600; font-family:'Instrument Sans',ui-sans-serif,system-ui,sans-serif; background:#fff; color:#33415c; border:1px solid #d9d2c0; cursor:pointer; transition:background .15s,border-color .15s; } .ds-btn-secondary:hover { background:#faf8f3; border-color:#8f8c82; } .ds-btn-secondary:focus-visible { outline:2px solid #1450d6; outline-offset:2px; }"
+    },
+    {
+      "name": "Gold Button",
+      "kind": "button",
+      "refersTo": "button-gold",
+      "description": "Ceremonial action — checkout and completion seals only.",
+      "html": "<button class=\"ds-btn-gold\">Complete purchase</button>",
+      "css": ".ds-btn-gold { display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:6px; padding:10px 16px; font-size:14px; font-weight:600; font-family:'Instrument Sans',ui-sans-serif,system-ui,sans-serif; background:#d8b96a; color:#131a24; border:none; cursor:pointer; transition:background .15s; } .ds-btn-gold:hover { background:#c8a24a; } .ds-btn-gold:focus-visible { outline:2px solid #1450d6; outline-offset:2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "White field on hairline border; registry-blue ring on focus.",
+      "html": "<label class=\"ds-label\" for=\"ds-email\">Email</label><input id=\"ds-email\" class=\"ds-input\" type=\"email\" placeholder=\"you@example.org\">",
+      "css": ".ds-label { display:block; font-size:14px; font-weight:500; color:#33415c; margin-bottom:6px; font-family:'Instrument Sans',ui-sans-serif,system-ui,sans-serif; } .ds-input { display:block; width:100%; border-radius:6px; border:1px solid #d9d2c0; background:#fff; font-size:14px; color:#1c2431; padding:8px 12px; font-family:'Instrument Sans',ui-sans-serif,system-ui,sans-serif; transition:border-color .15s, box-shadow .15s; } .ds-input:focus { border-color:#1450d6; box-shadow:0 0 0 2px rgba(20,80,214,.25); outline:none; } .ds-input:disabled { background:#f4f1e9; color:#8f8c82; }"
+    },
+    {
+      "name": "Ledger Row",
+      "kind": "custom",
+      "description": "Signature record list — hairline-ruled entries inside a bordered sheet.",
+      "html": "<div class=\"ds-ledger\"><div class=\"ds-ledger-row\"><span class=\"ds-ledger-lead\">Algora Media Law</span><span class=\"ds-ledger-meta\">Folio 0142 · Enrolled</span></div><div class=\"ds-ledger-row\"><span class=\"ds-ledger-lead\">Cross-Border Reporting</span><span class=\"ds-ledger-meta\">Folio 0177 · In progress</span></div></div>",
+      "css": ".ds-ledger { border:1px solid #d9d2c0; border-radius:8px; background:#fff; overflow:hidden; } .ds-ledger-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 20px; border-top:1px solid #e9e4d7; transition:background .15s; font-family:'Instrument Sans',ui-sans-serif,system-ui,sans-serif; } .ds-ledger-row:first-child { border-top:none; } .ds-ledger-row:hover { background:#faf8f3; } .ds-ledger-lead { font-size:14px; font-weight:600; color:#1c2431; } .ds-ledger-meta { font-size:11px; font-weight:500; letter-spacing:.12em; text-transform:uppercase; color:#4c4a44; }"
+    },
+    {
+      "name": "Register Label",
+      "kind": "custom",
+      "description": "Spaced small-caps surface title with trailing hairline — opens every page.",
+      "html": "<p class=\"ds-register\">Academy sign-in</p><div class=\"ds-rule\"></div>",
+      "css": ".ds-register { font-size:11px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:#4c4a44; margin:0; font-family:'Instrument Sans',ui-sans-serif,system-ui,sans-serif; } .ds-rule { height:1px; background:#d9d2c0; margin-top:8px; }"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "description": "Squared status stamp — tonal bg, matching border, darker text.",
+      "html": "<span class=\"ds-badge ds-badge-blue\">Trainer</span> <span class=\"ds-badge ds-badge-gold\">Certified</span>",
+      "css": ".ds-badge { display:inline-flex; align-items:center; gap:4px; border-radius:2px; padding:2px 8px; font-size:12px; font-weight:600; font-family:'Instrument Sans',ui-sans-serif,system-ui,sans-serif; } .ds-badge-blue { background:#eff4fd; color:#0345bf; border:1px solid #dfe9fb; } .ds-badge-gold { background:#faf4e4; color:#a97e2f; border:1px solid #f4ead0; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "White sheet on ivory paper — 8px corners, hairline border, whisper shadow.",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-title\">Credit ledger</p><p class=\"ds-card-body\">42 credits on account. Last entry 12 Oct 2026.</p></div>",
+      "css": ".ds-card { border-radius:8px; border:1px solid #d9d2c0; background:#fff; box-shadow:0 1px 2px rgba(19,26,36,.05); padding:20px; font-family:'Instrument Sans',ui-sans-serif,system-ui,sans-serif; } .ds-card-title { margin:0 0 6px; font-family:'Source Serif 4',Georgia,serif; font-size:18px; font-weight:600; color:#131a24; } .ds-card-body { margin:0; font-size:14px; color:#4c4a44; }"
+    },
+    {
+      "name": "Rail Navigation",
+      "kind": "nav",
+      "description": "Navy shell nav — brand lockup top, navy-100 links, seal-gold edge on active.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-link ds-nav-active\" href=\"#\">Register</a><a class=\"ds-nav-link\" href=\"#\">Courses</a><a class=\"ds-nav-link\" href=\"#\">Students</a></nav>",
+      "css": ".ds-nav { display:flex; flex-direction:column; gap:2px; background:#08355c; padding:12px; border-radius:8px; font-family:'Instrument Sans',ui-sans-serif,system-ui,sans-serif; } .ds-nav-link { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:6px; font-size:14px; font-weight:500; color:#d7e7f5; text-decoration:none; transition:background .15s; } .ds-nav-link:hover { background:rgba(255,255,255,.06); } .ds-nav-active { background:#0c2b4c; box-shadow:inset 2px 0 0 #c8a24a; font-weight:600; }"
+    },
+    {
+      "name": "Course Tab Strip",
+      "kind": "nav",
+      "description": "Trainer course spine — paper-side tabs, seal underline on active.",
+      "html": "<nav class=\"ds-tabs\"><a class=\"ds-tab ds-tab-active\" href=\"#\">Content</a><a class=\"ds-tab\" href=\"#\">Sessions</a><a class=\"ds-tab\" href=\"#\">Students</a></nav>",
+      "css": ".ds-tabs { display:flex; gap:4px; border-bottom:1px solid #d9d2c0; font-family:'Instrument Sans',ui-sans-serif,system-ui,sans-serif; } .ds-tab { position:relative; margin-bottom:-1px; padding:10px 12px; font-size:14px; font-weight:500; color:#6b685f; text-decoration:none; border-bottom:2px solid transparent; transition:color .15s,border-color .15s; } .ds-tab:hover { color:#1c2431; border-color:#e9e4d7; } .ds-tab-active { color:#131a24; font-weight:600; border-bottom-color:#c8a24a; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Academy Register",
+    "overview": "The interface behaves like an institutional registry: a bound ledger of courses, enrolments, results, and credit. A committed navy shell (#08355c, the authentic EuroAfrica header blue) holds an ivory paper ground where every record is ruled, numbered, and stamped. Serif display type (Source Serif 4) gives headings the weight of an engraved title page; spaced small-caps labels mark each surface like a register's section head. Density is calm but information-forward; nothing glows, floats, or gradients.",
+    "keyCharacteristics": [
+      "Navy rail + ivory paper ground; never reversed mid-flow",
+      "Hairline .ledger rows instead of floating cards for record lists",
+      ".register small-caps labels and .folio record numbers as signature marks",
+      "Seal gold reserved for stamp moments (active states, seals, rare accents)",
+      "Serif display confined to headings; everything else is Instrument Sans"
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "Registry blue is the only action color. Gold is a seal, not a button color — except .btn-gold, reserved for checkout and completion ceremonies.", "section": "colors" },
+      { "name": "The Paper Rule", "body": "Content lives on paper or white cards. Navy never appears inside the content column; it is the shelf, not the page.", "section": "colors" },
+      { "name": "The Serif Boundary Rule", "body": "Source Serif 4 appears only in .h1/.h2 and the brand wordmark context. Buttons, tables, badges, and nav stay in Instrument Sans.", "section": "typography" },
+      { "name": "The Flat Register Rule", "body": "Ledger rows, tables, and nav are hairline-ruled, never shadowed. Shadow means 'detached sheet,' and only the sign-in sheet detaches.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do open every surface with .register label + hairline + .h1 — the title-page rhythm.",
+      "Do use .ledger for record lists; hairlines instead of stacked cards.",
+      "Do keep gold to stamps: seals, active edges, .btn-gold ceremonies.",
+      "Do hold icon-only touch targets at ≥44px and text contrast at ≥4.5:1.",
+      "Do use the authentic public/brand/eman-logo.png via <x-ui.brand>; never redraw the mark."
+    ],
+    "donts": [
+      "Don't put navy surfaces inside the content column, or paper panels inside the rail.",
+      "Don't add gradients, glows, pill buttons, or shadowed list rows.",
+      "Don't introduce a second accent color or a monospace face — folios use letterspaced sans.",
+      "Don't use serif below text-lg or on interactive controls.",
+      "Don't create public marketing pages; the register begins at sign-in."
+    ]
+  }
+}

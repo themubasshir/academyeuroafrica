@@ -9,15 +9,25 @@ use App\Http\Controllers\Deploy\MigrateRunnerController;
 use App\Http\Controllers\Files\MaterialController;
 use App\Http\Controllers\Webhooks\PaymentWebhookController;
 use App\Models\Order;
-use App\Models\Programme;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
-Route::get('/', fn () => view('welcome', [
-    'programmes' => Programme::where('status', 'published')->withCount('courses')->get(),
-]))->name('home');
+// Private portal: `/` is the entry point, not a marketing page.
+// Guests see the branded login; signed-in users are sent to their role home.
+Route::get('/', function () {
+    if (! auth()->check()) {
+        return redirect()->route('login');
+    }
+    $user = auth()->user();
+
+    return redirect()->to(match (true) {
+        $user->isAdmin() => route('admin.dashboard'),
+        $user->isTrainer() => route('trainer.dashboard'),
+        default => route('student.dashboard'),
+    });
+})->name('home');
 
 // Public catalogue
 Route::livewire('programmes/{programme}', 'catalogue.programme-show')->name('programme.show');

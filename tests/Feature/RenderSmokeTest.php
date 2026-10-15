@@ -8,7 +8,6 @@ use App\Models\CourseModule;
 use App\Models\CourseVariant;
 use App\Models\Enrolment;
 use App\Models\Lesson;
-use App\Models\Programme;
 use App\Models\Quiz;
 use App\Models\TrainerAssignment;
 use App\Models\User;
@@ -150,10 +149,15 @@ class RenderSmokeTest extends TestCase
         $this->get(route('course.show', $this->course))->assertForbidden();
     }
 
-    public function test_home_lists_published_programmes(): void
+    public function test_root_routes_guest_to_login_and_users_to_role_home(): void
     {
-        Programme::create(['name' => 'Public Prog', 'slug' => 'public-prog', 'status' => 'published']);
-        $this->get(route('home'))->assertOk()->assertSee('Public Prog');
+        // Guest → branded login (private portal, no public homepage).
+        $this->get(route('home'))->assertRedirect(route('login'));
+
+        // Authenticated users land on their role dashboard.
+        $this->actingAs($this->student)->get(route('home'))->assertRedirect(route('student.dashboard'));
+        $this->actingAs($this->trainer)->get(route('home'))->assertRedirect(route('trainer.dashboard'));
+        $this->actingAs($this->admin)->get(route('home'))->assertRedirect(route('admin.dashboard'));
     }
 
     // ---------- role boundaries ----------

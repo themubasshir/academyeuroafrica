@@ -11,8 +11,8 @@ class ExampleTest extends TestCase
 
     public function test_the_application_returns_a_successful_response(): void
     {
-        $response = $this->get('/');
-
-        $response->assertStatus(200);
+        // `/` is a private-portal entry: guests are routed to login.
+        $this->get('/')->assertRedirect(route('login'));
+        $this->get(route('login'))->assertOk();
     }
 }

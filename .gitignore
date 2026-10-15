@@ -26,3 +26,8 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 storage/qa/
+
+# Impeccable engine binaries (downloaded per-platform; launcher re-fetches)
+.agent/skills/*/scripts/bin/
+.agents/skills/*/scripts/bin/
+.gemini/skills/*/scripts/bin/
