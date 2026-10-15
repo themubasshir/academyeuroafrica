@@ -3,66 +3,102 @@
 ## Constraints honoured
 - No SSH/terminal on prod. No Docker/Redis/Supervisor/Node/WebSockets.
 - Composer + Vite run locally; only built artefacts uploaded.
+- Subdomain docroot is **fixed** — cannot be repointed. Split layout used.
+
+## Split layout (required)
+
+The `academy.euroafricamedia.eu` docroot is a fixed, chrooted web root and
+cannot host the private application. Deploy as two pieces:
+
+| Piece | Contents | Destination |
+|---|---|---|
+| `eamn-app-<stamp>.tar.gz` | Laravel app **minus** `public/` (app/, bootstrap/, config/, database/, resources/, routes/, storage/, vendor/, artisan, composer.*) + `.env.production.example` | `/home/euroafri/eamn-academy/` — upload + extract via **cPanel File Manager** (not FTP). Must sit **outside** the web root. |
+| `eamn-public-<stamp>.tar.gz` | Only `public/` contents: `index.php`, `.htaccess`, `build/`, `brand/`, `favicon.ico`, `robots.txt` | Existing academy docroot (FTP `/` = `/home/euroafri/public_html`-equivalent, the dir containing `cgi-bin/`/`php.ini`). |
+
+`public/index.php` resolves the private app path at runtime, in order:
+1. `APP_BASE_PATH` env var (`SetEnv` in docroot `.htaccess`, or PHP-FPM env).
+2. An `.app-base-path` file placed next to `index.php` containing the path.
+
+…then calls `$app->usePublicPath(__DIR__)` so `public_path()` still points at the
+docroot where `brand/`/`build/` live, while `base_path()`/`storage_path()` point
+at the private dir.
 
 ## Build (local / CI)
 `./build.sh` performs, in order:
-1. **Preflight** — required tools (`php composer node npm tar`) and PHP extensions (`mbstring openssl pdo curl fileinfo xml ctype json tokenizer`).
-2. `php artisan test` — hard gate; build aborts on any failure.
+1. **Preflight** — tools + PHP extensions (`mbstring openssl pdo pdo_mysql curl fileinfo xml ctype json tokenizer zip gd intl bcmath`).
+2. `php artisan test` — hard gate; aborts on failure.
 3. `composer install --no-dev --prefer-dist --optimize-autoloader`.
 4. `npm ci && npm run build`.
-5. Stage a clean tree excluding `dist/`, `node_modules/`, `.git`, `tests/`, `.env*`, cache/log/app-storage, `phpunit.xml`, `.ai`.
-6. Copy `.env.example` → `.env.production.example` inside the bundle (the *only* env file shipped); inject `PAYMENT_GATEWAY=stripe` so the test gateway can't be selected by accident.
-7. `tar -czf dist/eamn-academy-<stamp>.tar.gz` + manifest (`<stamp>.manifest.txt`) with PHP/Laravel versions, per-file SHA-256, archive checksum.
+5. Stage **two** trees: private app (excludes `public/`, `dist`, `node_modules`, `.git`, `tests`, `.env*`, storage runtime, `phpunit.xml`, `.ai`, `vendor` copied separately) and web root (`public/` flat).
+6. `.env.production.example` ships only inside the **app** archive; injects `PAYMENT_GATEWAY=paypal` + a commented `APP_BASE_PATH` hint.
+7. `tar` both; manifest with PHP/Laravel versions + SHA-256 of every file + archive checksums.
 
 ## Config caching
-Do **not** run `config:cache` locally — it would bake local/placeholder env into the artefact. Run it on the host **after** creating the real `.env`.
-
-## Layout on host
-- App dir **outside** web root: `/home/<user>/eamn-academy/`
-- Subdomain `academy.euroafricamedia.eu` docroot → `/home/<user>/eamn-academy/public`
-- Only `public/` is web-reachable. `.env`, `storage/`, `vendor/` never exposed.
-- `storage/` and `bootstrap/cache` writable by PHP user (cPanel perms).
+Do **not** run `config:cache` locally — it bakes local env into the artefact. Run on host **after** creating the real `.env`.
 
 ## First deploy
-1. Upload `dist/eamn-academy-<stamp>.tar.gz` via cPanel File Manager/FTP; extract outside docroot.
-2. Point subdomain docroot at `.../eamn-academy/public`.
-3. Create `.env` on host (never shipped): MySQL creds, `APP_KEY`, `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://academy.euroafricamedia.eu`, `JOOMLA_BASE_URL`, `JOOMLA_BRIDGE_SECRET`, `DEPLOY_ALLOWED_IPS`, and PayPal:
-   `PAYMENT_GATEWAY=paypal PAYPAL_MODE=live PAYPAL_CLIENT_ID PAYPAL_CLIENT_SECRET PAYPAL_WEBHOOK_ID PAYPAL_CURRENCY=EUR PAYPAL_BRAND_NAME="EAMN Academy"`.
-4. Run one-time migration via the controlled deploy runner (below).
-5. `php artisan config:cache route:cache view:cache` (on host, via the runner or cron one-shot if no SSH).
-6. Verify `/up` health + login flow.
+1. `./build.sh` locally → two archives in `dist/`.
+2. **cPanel File Manager**: upload `eamn-app-*.tar.gz` to `/home/euroafri/`, extract → produces `/home/euroafri/eamn-academy/` (private).
+3. **File Manager or FTP**: upload `eamn-public-*.tar.gz`, extract **into the existing academy docroot** (replaces `index.php`, adds `build/`, `brand/`, `.htaccess`).
+4. Create `/home/euroafri/eamn-academy/.env` (never shipped):
+   ```
+   APP_ENV=production
+   APP_DEBUG=false
+   APP_URL=https://academy.euroafricamedia.eu
+   ACADEMY_URL=https://academy.euroafricamedia.eu
+   APP_BASE_PATH=/home/euroafri/eamn-academy
+   APP_KEY=<generate on host>
+   DB_CONNECTION=mysql
+   DB_HOST=localhost
+   DB_DATABASE=euroafri_academycli
+   DB_USERNAME=euroafri_academycli
+   DB_PASSWORD=<secret>
+   SESSION_DRIVER=database
+   QUEUE_CONNECTION=database
+   CACHE_STORE=database
+   PAYMENT_GATEWAY=paypal
+   PAYPAL_MODE=sandbox
+   PAYPAL_CLIENT_ID=<sandbox id>
+   PAYPAL_CLIENT_SECRET=<sandbox secret>
+   PAYPAL_WEBHOOK_ID=<sandbox webhook>
+   PAYPAL_CURRENCY=EUR
+   PAYPAL_BRAND_NAME="EAMN Academy"
+   JOOMLA_BASE_URL=https://euroafricamedia.eu
+   JOOMLA_CLIENT_ID=eamn-academy
+   JOOMLA_BRIDGE_SECRET=<generate>
+   DEPLOY_ALLOWED_IPS=<your public IP>
+   ```
+   Generate `APP_KEY` on host via `php artisan key:generate` (run from app dir).
+5. Create `storage/app/deploy.token` with a one-time secret for the migration runner.
+6. `POST https://academy.euroafricamedia.eu/deploy/migrate` with `{token, run:"migrate --force"}` → runs once, writes `deploy.done`, refuses again.
+7. `POST .../deploy/migrate` `{token, run:"db:seed --class=RoleSeeder --force"}` (second call needs flag removed — see note) **or** run `php artisan db:seed --class=RoleSeeder` via cPanel cron one-shot / `exec`-capable probe.
+8. `php artisan config:cache route:cache view:cache` on host (cron one-shot or probe).
+9. Verify `/up`, `/` → `/login`, assets, then PayPal sandbox round-trip.
 
-## Migration runner (no SSH)
-`POST deploy/migrate` — gated by IP allowlist + signed token + self-disabling flag file + audit log. Runs `Artisan::call('migrate',['--force'=>true])` once, then refuses. **Not** a general Artisan endpoint. After use it is dead until the flag file is removed (manual file op on next deploy).
+## Writable dirs on host
+`storage/` and `bootstrap/cache/` under the private dir must be writable by the PHP user (`euroafri`). cPanel's `MultiPHP`/`php.ini` user owns them; `chmod 755` is sufficient under suPHP/LSAPI.
 
 ## Cron (cPanel → Cron Jobs)
 ```
-* * * * * php /home/<user>/eamn-academy/artisan schedule:run >> /dev/null 2>&1
-* * * * * php /home/<user>/eamn-academy/artisan queue:work --stop-when-empty --max-time=50 >> /dev/null 2>&1
+* * * * * php /home/euroafri/eamn-academy/artisan schedule:run >> /dev/null 2>&1
+* * * * * php /home/euroafri/eamn-academy/artisan queue:work --stop-when-empty --max-time=50 >> /dev/null 2>&1
 ```
-Verify cron support in the panel first.
+
+## Migration runner (no SSH)
+`POST deploy/migrate` — IP allowlist + single-use token + self-disabling flag + command allowlist (`migrate --force`, `db:seed --class=RoleSeeder --force`) + audit log. Each successful call writes `storage/app/deploy.done`; to run again (e.g. the seeder) delete that flag file via File Manager first.
 
 ## Secrets & gateway safety
-- Test-only payment gateway is gated to `local`/`testing` env (`app()->environment`), and `build.sh` injects `PAYMENT_GATEWAY=paypal` in the shipped template. On prod the test routes are not registered at all.
-- PayPal sandbox vs live is selected solely by `PAYPAL_MODE`; sandbox credentials can never reach `api-m.paypal.com` (the mode picks the host).
-- Register a **live** webhook (separate `PAYPAL_WEBHOOK_ID`) on the live PayPal app — sandbox webhook IDs don't verify live events.
-- No dev secrets, `.git`, local `.env`, or test files ship in the tarball.
-
-## PayPal go-live checklist (staging → live)
-1. PayPal Developer → Sandbox REST app → copy Client ID/Secret; create webhook
-   `https://<staging-host>/webhooks/paypal` for `PAYMENT.CAPTURE.*` +
-   `CHECKOUT.ORDER.*`; copy Webhook ID.
-2. Set `PAYPAL_MODE=sandbox` + sandbox creds on staging. Run a real sandbox
-   purchase with a sandbox buyer account; confirm enrolment lands.
-3. For live: create a **live** REST app + live webhook, swap `PAYPAL_MODE=live`
-   and the live creds/Webhook ID. Sandbox IDs don't verify live events.
-4. Refunds: admin-triggered, idempotent (`PayPal-Request-Id`), recorded in
-   `refunds`. Access revocation is a manual admin decision, not automatic.
+- Test gateway gated to `local`/`testing` env — routes not registered on prod.
+- `PAYPAL_MODE=sandbox` until live cutover; live creds + live `PAYPAL_WEBHOOK_ID` required for live.
+- No `.env`, `.git`, tests, `DemoSeeder`, or local DB ship in either archive.
 
 ## Backup & rollback
 - DB: cPanel/phpMyAdmin export before each release.
-- Code: keep prior tarball; rollback = re-extract previous archive + restore DB snapshot.
-- `down` flag file for maintenance window if needed.
+- Code: keep prior two archives; rollback = re-extract both + restore DB.
+- `storage/framework/down` for maintenance window.
 
 ## Never do
-- No web-based general Artisan runner. No `storage:link` dependency. No public `.env`/vendor. No symlink reliance on FTP.
+- No `.htaccess`-only protection of an exposed full app (split layout removes the need).
+- No `storage:link` (private disk streams via controller; no public symlink required).
+- No web-based general Artisan runner beyond the gated one-time migrator.
+- No `APP_KEY` reuse from local.

@@ -31,3 +31,4 @@ storage/qa/
 .agent/skills/*/scripts/bin/
 .agents/skills/*/scripts/bin/
 .gemini/skills/*/scripts/bin/
+/dist/

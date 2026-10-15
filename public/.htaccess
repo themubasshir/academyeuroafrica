@@ -1,3 +1,9 @@
+# Deny hidden files (dotfiles like .app-base-path, stray .env) before rewrite.
+# Apache 2.4 / LiteSpeed LSAPI syntax.
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
