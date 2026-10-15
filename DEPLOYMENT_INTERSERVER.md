@@ -13,7 +13,7 @@ cannot host the private application. Deploy as two pieces:
 | Piece | Contents | Destination |
 |---|---|---|
 | `eamn-app-<stamp>.tar.gz` | Laravel app **minus** `public/` (app/, bootstrap/, config/, database/, resources/, routes/, storage/, vendor/, artisan, composer.*) + `.env.production.example` | `/home/euroafri/eamn-academy/` — upload + extract via **cPanel File Manager** (not FTP). Must sit **outside** the web root. |
-| `eamn-public-<stamp>.tar.gz` | Only `public/` contents: `index.php`, `.htaccess`, `build/`, `brand/`, `favicon.ico`, `robots.txt` | Existing academy docroot (FTP `/` = `/home/euroafri/public_html`-equivalent, the dir containing `cgi-bin/`/`php.ini`). |
+| `eamn-public-<stamp>.tar.gz` | Only `public/` contents: `index.php`, `.htaccess`, `build/`, `brand/`, `favicon.ico`, `robots.txt` | `/home/euroafri/academy.euroafricamedia.eu/` — the **existing** academy docroot (FTP `/`, contains `cgi-bin/`/`php.ini`). |
 
 `public/index.php` resolves the private app path at runtime, in order:
 1. `APP_BASE_PATH` env var (`SetEnv` in docroot `.htaccess`, or PHP-FPM env).
@@ -39,7 +39,7 @@ Do **not** run `config:cache` locally — it bakes local env into the artefact. 
 ## First deploy
 1. `./build.sh` locally → two archives in `dist/`.
 2. **cPanel File Manager**: upload `eamn-app-*.tar.gz` to `/home/euroafri/`, extract → produces `/home/euroafri/eamn-academy/` (private).
-3. **File Manager or FTP**: upload `eamn-public-*.tar.gz`, extract **into the existing academy docroot** (replaces `index.php`, adds `build/`, `brand/`, `.htaccess`).
+3. **File Manager or FTP**: upload `eamn-public-*.tar.gz`, extract into `/home/euroafri/academy.euroafricamedia.eu/` (the existing docroot — replaces `index.php`, adds `build/`, `brand/`, `.htaccess`).
 4. Create `/home/euroafri/eamn-academy/.env` (never shipped):
    ```
    APP_ENV=production
