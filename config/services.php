@@ -35,6 +35,20 @@ return [
         ],
     ],
 
+    'payments' => [
+        'default' => env('PAYMENT_GATEWAY', 'stripe'),
+    ],
+
+    'stripe' => [
+        'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+
+    // Local/test adapter only — never used in production.
+    'test_gateway' => [
+        'secret' => env('TEST_GATEWAY_SECRET', 'test-secret'),
+    ],
+
     'joomla' => [
         'base_url' => env('JOOMLA_BASE_URL', 'https://euroafricamedia.eu'),
         'bridge_secret' => env('JOOMLA_BRIDGE_SECRET'),

@@ -33,9 +33,49 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::livewire('dashboard', 'student.dashboard')
         ->name('student.dashboard');
 
-    Route::get('checkout/{variant}', fn () => view('placeholder', ['title' => 'Checkout']))
-        ->name('checkout.show'); // Phase 3
+    Route::get('checkout/success', [\App\Http\Controllers\CheckoutController::class, 'success'])
+        ->name('checkout.success');
+    Route::get('checkout/cancelled', [\App\Http\Controllers\CheckoutController::class, 'cancelled'])
+        ->name('checkout.cancelled');
+    Route::get('checkout/{variant}', [\App\Http\Controllers\CheckoutController::class, 'show'])
+        ->name('checkout.show');
+    Route::post('checkout/{variant}', [\App\Http\Controllers\CheckoutController::class, 'store'])
+        ->name('checkout.store');
 });
+
+// Payment webhooks — no auth, no CSRF, verified per-gateway.
+Route::post('webhooks/{gateway}', \App\Http\Controllers\Webhooks\PaymentWebhookController::class)
+    ->name('webhooks.payment');
+
+// Local-only test checkout simulator (never registered in production).
+if (app()->environment(['local', 'testing'])) {
+    Route::get('test-checkout/{reference}', function (string $reference) {
+        $order = \App\Models\Order::where('reference', $reference)->firstOrFail();
+
+        return view('test-checkout', ['order' => $order]);
+    })->middleware(['auth', 'active'])->name('test-checkout.show');
+
+    Route::post('test-checkout/{reference}/pay', function (string $reference, Illuminate\Http\Request $request) {
+        $order = \App\Models\Order::where('reference', $reference)->firstOrFail();
+        abort_unless($order->user_id === $request->user()->id, 403);
+
+        // Fire the same webhook path the real gateway would hit.
+        $payload = json_encode([
+            'event_id' => 'evt_'.Illuminate\Support\Str::random(16),
+            'type' => 'test.paid',
+            'transaction_id' => 'test_txn_'.$order->reference,
+            'order_reference' => $order->reference,
+        ]);
+        $secret = config('services.test_gateway.secret', 'test-secret');
+        $sig = hash_hmac('sha256', $payload, $secret);
+
+        $resp = Illuminate\Support\Facades\Http::withHeaders(['X-Test-Signature' => $sig])
+            ->withBody($payload, 'application/json')
+            ->post(route('webhooks.payment', 'test'));
+
+        return redirect()->route('checkout.success', ['order' => $order->reference]);
+    })->middleware(['auth', 'active'])->name('test-checkout.pay');
+}
 
 Route::middleware(['auth', 'active', 'role:trainer,super-admin,academy-admin'])
     ->prefix('trainer')->name('trainer.')->group(function () {
