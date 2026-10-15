@@ -1,6 +1,10 @@
 <div class="mx-auto max-w-4xl space-y-6">
-    <a href="{{ route('trainer.quizzes', $quiz->course) }}" class="text-sm text-eamn-700 hover:underline">&larr; Quizzes</a>
-    <h1 class="h1">{{ $quiz->title }} — attempts</h1>
+    <a href="{{ route('trainer.quizzes', $quiz->course) }}" class="link text-sm">&larr; Quizzes</a>
+    <div>
+        <p class="register">Attempts</p>
+        <h1 class="h1 mt-1.5">{{ $quiz->title }}</h1>
+        <div class="mt-4 h-px w-full bg-paper-300"></div>
+    </div>
 
     <div class="space-y-4">
         @forelse ($attempts as $attempt)
@@ -8,7 +12,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="font-medium">{{ $attempt->user->name }}</p>
-                        <p class="text-xs text-gray-500">Attempt {{ $attempt->attempt_no }} · {{ ucfirst(str_replace('_',' ',$attempt->status)) }} · {{ $attempt->submitted_at?->diffForHumans() }}</p>
+                        <p class="text-xs text-ink-500">Attempt {{ $attempt->attempt_no }} · {{ ucfirst(str_replace('_',' ',$attempt->status)) }} · {{ $attempt->submitted_at?->diffForHumans() }}</p>
                     </div>
                     <span class="text-xl font-semibold">{{ $attempt->score ?? '—' }}</span>
                 </div>
@@ -20,12 +24,12 @@
                             <div class="flex items-center justify-between gap-3 text-sm">
                                 <div>
                                     <p class="font-medium">{{ $ans->question->prompt }}</p>
-                                    <p class="text-gray-600">{{ $ans->text_answer }}</p>
+                                    <p class="text-ink-600">{{ $ans->text_answer }}</p>
                                 </div>
                                 <span class="flex items-center gap-1">
                                     <input type="number" min="0" max="{{ $ans->question->points }}"
                                            x-on:change="$wire.award({{ $ans->id }}, $event.target.value)"
-                                           class="w-16 rounded border-gray-300 text-sm">
+                                           class="w-16 rounded border-paper-300 text-sm">
                                     / {{ $ans->question->points }}
                                 </span>
                             </div>
@@ -36,7 +40,7 @@
                 @endif
             </div>
         @empty
-            <p class="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">No attempts yet.</p>
+            <p class="rounded-2xl border border-dashed border-paper-300 bg-white p-8 text-center text-sm text-ink-500">No attempts yet.</p>
         @endforelse
     </div>
 </div>

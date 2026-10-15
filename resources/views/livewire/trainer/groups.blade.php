@@ -1,7 +1,10 @@
 <div class="mx-auto max-w-4xl space-y-6">
-    <a href="{{ route('trainer.dashboard') }}" class="text-sm text-eamn-700 hover:underline">&larr; Dashboard</a>
-    <h1 class="h1">Groups — {{ $course->title }}</h1>
-    <p class="text-sm text-gray-500">Optional. Students can complete the course without a group.</p>
+    <div>
+        <a href="{{ route('trainer.dashboard') }}" class="link text-sm">&larr; Dashboard</a>
+        <div class="mt-3"><p class="register">{{ $course->programme->name }}</p><h1 class="h1 mt-1.5">{{ $course->title }}</h1></div>
+    </div>
+    <x-trainer.course-nav :course="$course" active="groups" />
+    <p class="text-sm text-ink-500">Optional. Students can complete the course without a group.</p>
 
     <form wire:submit="create" class="card flex gap-3 p-4">
         <input wire:model="name" placeholder="New group name" class="input flex-1" aria-label="New group name">
@@ -13,13 +16,13 @@
             <div class="card-pad">
                 <div class="flex items-center justify-between">
                     <h3 class="font-medium">{{ $group->name }}</h3>
-                    <button wire:click="deleteGroup({{ $group->id }})" wire:confirm="Delete group?" class="text-xs text-red-600">Delete</button>
+                    <button wire:click="deleteGroup({{ $group->id }})" wire:confirm="Delete group?" class="text-xs text-red-700">Delete</button>
                 </div>
                 <ul class="mt-3 space-y-1">
                     @foreach ($students as $s)
                         <li class="flex items-center gap-2 text-sm">
                             <input type="checkbox" wire:click="toggleMember({{ $group->id }}, {{ $s->id }})"
-                                   @checked($group->members->contains($s->id)) class="rounded text-eamn-600">
+                                   @checked($group->members->contains($s->id)) class="rounded text-reg-600">
                             {{ $s->name }}
                         </li>
                     @endforeach

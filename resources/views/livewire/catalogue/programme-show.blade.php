@@ -1,30 +1,28 @@
-<div class="space-y-6">
-    <div>
-        <h1 class="h1">{{ $programme->name }}</h1>
-        @if ($programme->description)
-            <p class="mt-1 text-gray-600">{{ $programme->description }}</p>
-        @endif
-    </div>
+<div class="mx-auto max-w-5xl space-y-6">
+    <x-ui.page-head register="Programme" :title="$programme->name" />
+    @if ($programme->description)
+        <p class="max-w-2xl leading-relaxed text-ink-600">{{ $programme->description }}</p>
+    @endif
 
-    <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="ledger">
         @forelse ($courses as $course)
-            <a href="{{ route('course.show', $course) }}"
-               class="group card-pad shadow-sm transition hover:border-eamn-300 hover:shadow">
-                <h2 class="font-semibold text-gray-900 group-hover:text-eamn-800">{{ $course->title }}</h2>
-                <p class="mt-1 line-clamp-2 text-sm text-gray-500">{{ $course->description }}</p>
-                <div class="mt-4 text-sm font-medium text-eamn-700">
-                    @foreach ($course->variants as $variant)
-                        <div class="flex justify-between">
-                            <span>{{ $variant->name }}</span>
-                            <span>{{ $variant->priceFormatted() }}</span>
-                        </div>
-                    @endforeach
-                </div>
+            <a href="{{ route('course.show', $course) }}" class="ledger-row group">
+                <span class="min-w-0 flex-1">
+                    <span class="block font-display text-base font-semibold text-ink-950 group-hover:text-reg-700">{{ $course->title }}</span>
+                    <span class="mt-0.5 block line-clamp-2 text-sm text-ink-500">{{ $course->description }}</span>
+                    <span class="mt-2 block space-y-0.5">
+                        @foreach ($course->variants as $variant)
+                            <span class="flex justify-between gap-4 text-xs text-ink-600">
+                                <span>{{ $variant->name }}</span>
+                                <span class="font-medium">{{ $variant->priceFormatted() }}</span>
+                            </span>
+                        @endforeach
+                    </span>
+                </span>
+                <span class="shrink-0 self-start text-sm font-semibold text-reg-700">View →</span>
             </a>
         @empty
-            <p class="col-span-full rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center text-sm text-gray-500">
-                No courses available yet.
-            </p>
+            <x-ui.empty title="No courses available yet" />
         @endforelse
     </div>
 </div>

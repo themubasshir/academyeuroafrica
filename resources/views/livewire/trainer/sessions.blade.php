@@ -1,8 +1,11 @@
 <div class="mx-auto max-w-4xl space-y-6">
-    <a href="{{ route('trainer.dashboard') }}" class="text-sm text-eamn-700 hover:underline">&larr; Dashboard</a>
-    <h1 class="h1">Live sessions — {{ $course->title }}</h1>
+    <div>
+        <a href="{{ route('trainer.dashboard') }}" class="link text-sm">&larr; Dashboard</a>
+        <div class="mt-3"><p class="register">{{ $course->programme->name }}</p><h1 class="h1 mt-1.5">{{ $course->title }}</h1></div>
+    </div>
+    <x-trainer.course-nav :course="$course" active="sessions" />
 
-    @if (session('saved'))<div class="rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">{{ session('saved') }}</div>@endif
+    @if (session('saved'))<div class="rounded-lg bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{{ session('saved') }}</div>@endif
 
     <section class="card-pad">
         <h2 class="font-semibold">Schedule session</h2>
@@ -41,14 +44,14 @@
                 <div class="flex items-center justify-between card p-4">
                     <div>
                         <p class="font-medium text-sm">{{ $s->title }}</p>
-                        <p class="text-xs text-gray-500">
+                        <p class="text-xs text-ink-500">
                             {{ $s->starts_at->setTimezone(auth()->user()->timezone ?? 'UTC')->format('M j, g:i A T') }}
                             · {{ ucfirst($s->provider) }}
                             @if ($s->group)· Group: {{ $s->group->name }}@endif
                             @if ($s->student)· 1:1 {{ $s->student->name }}@endif
                         </p>
                     </div>
-                    <button wire:click="cancel({{ $s->id }})" wire:confirm="Cancel this session?" class="text-sm font-medium text-red-600 hover:underline">Cancel</button>
+                    <button wire:click="cancel({{ $s->id }})" wire:confirm="Cancel this session?" class="text-sm font-medium text-red-700 hover:underline">Cancel</button>
                 </div>
             @empty
                 <x-ui.empty title="No sessions" />

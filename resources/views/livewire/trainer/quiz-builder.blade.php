@@ -1,7 +1,7 @@
 <div class="mx-auto max-w-4xl space-y-6">
-    <a href="{{ route('trainer.quizzes', $quiz->course) }}" class="text-sm text-eamn-700 hover:underline">&larr; Quizzes</a>
-    <div class="flex items-center justify-between">
-        <h1 class="h1">{{ $quiz->title }}</h1>
+    <a href="{{ route('trainer.quizzes', $quiz->course) }}" class="link text-sm">&larr; Quizzes</a>
+    <div class="flex items-end justify-between gap-3">
+        <div><p class="register">Quiz builder</p><h1 class="h1 mt-1.5">{{ $quiz->title }}</h1></div>
         @if ($quiz->status === 'published')
             <button wire:click="unpublish" class="btn-secondary btn-sm">Unpublish</button>
         @else
@@ -9,7 +9,7 @@
         @endif
     </div>
 
-    @if (session('saved'))<div class="rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">{{ session('saved') }}</div>@endif
+    @if (session('saved'))<div class="rounded-lg bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{{ session('saved') }}</div>@endif
 
     <section class="card-pad">
         <h2 class="font-semibold">Settings</h2>
@@ -34,26 +34,26 @@
 
     <section class="card-pad">
         <h2 class="font-semibold">Questions</h2>
-        <ul class="mt-3 divide-y divide-gray-100">
+        <ul class="mt-3 divide-y divide-paper-200">
             @forelse ($questions as $q)
                 <li class="flex items-start justify-between py-3">
                     <div>
                         <p class="text-sm font-medium">{{ $q->prompt }}</p>
-                        <p class="text-xs text-gray-500">{{ strtoupper($q->type) }} · {{ $q->points }}pt · {{ $q->options->count() }} options</p>
+                        <p class="text-xs text-ink-500">{{ strtoupper($q->type) }} · {{ $q->points }}pt · {{ $q->options->count() }} options</p>
                     </div>
                     <span class="flex gap-1">
-                        <button wire:click="moveQuestion({{ $q->id }}, 'up')" class="min-h-7 min-w-7 rounded px-1.5 py-0.5 text-gray-500 hover:bg-gray-200" aria-label="Move question up">↑</button>
-                        <button wire:click="moveQuestion({{ $q->id }}, 'down')" class="min-h-7 min-w-7 rounded px-1.5 py-0.5 text-gray-500 hover:bg-gray-200" aria-label="Move question down">↓</button>
-                        <button wire:click="deleteQuestion({{ $q->id }})" class="min-h-7 min-w-7 rounded px-1.5 py-0.5 text-red-600 hover:bg-red-50" aria-label="Delete question">✕</button>
+                        <button wire:click="moveQuestion({{ $q->id }}, 'up')" class="flex h-11 w-11 items-center justify-center rounded-md text-ink-500 hover:bg-paper-100" aria-label="Move question up">↑</button>
+                        <button wire:click="moveQuestion({{ $q->id }}, 'down')" class="flex h-11 w-11 items-center justify-center rounded-md text-ink-500 hover:bg-paper-100" aria-label="Move question down">↓</button>
+                        <button wire:click="deleteQuestion({{ $q->id }})" class="flex h-11 w-11 items-center justify-center rounded-md text-red-700 hover:bg-red-50" aria-label="Delete question">✕</button>
                     </span>
                 </li>
             @empty
-                <li class="py-4 text-sm text-gray-500">No questions yet.</li>
+                <li class="py-4 text-sm text-ink-500">No questions yet.</li>
             @endforelse
         </ul>
     </section>
 
-    <section class="rounded-xl border border-eamn-200 bg-eamn-50 p-5">
+    <section class="rounded-lg border border-reg-100 bg-reg-50/60 p-5">
         <h3 class="font-semibold">Add question</h3>
         <div class="mt-3 space-y-3">
             <div class="grid gap-3 sm:grid-cols-3">
@@ -67,18 +67,18 @@
 
             @if (in_array($qType, ['mcq','multi','tf','short']))
                 <div class="space-y-2">
-                    <p class="text-xs text-gray-500">
+                    <p class="text-xs text-ink-500">
                         {{ $qType === 'short' ? 'Acceptable answers (case-insensitive):' : 'Options — mark correct:' }}
                     </p>
                     @foreach ($qOptions as $i => $opt)
                         <div class="flex items-center gap-2">
                             @if ($qType !== 'short')
-                                <input type="checkbox" wire:model="qOptions.{{ $i }}.correct" class="rounded text-eamn-600">
+                                <input type="checkbox" wire:model="qOptions.{{ $i }}.correct" class="rounded text-reg-600">
                             @endif
                             <input wire:model="qOptions.{{ $i }}.label" placeholder="Option {{ $i + 1 }}" class="flex-1 input">
                         </div>
                     @endforeach
-                    <button type="button" wire:click="addOption" class="text-sm text-eamn-700">+ Add option</button>
+                    <button type="button" wire:click="addOption" class="text-sm text-reg-700">+ Add option</button>
                 </div>
             @endif
 

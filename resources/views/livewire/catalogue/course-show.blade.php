@@ -1,16 +1,13 @@
 <div class="mx-auto max-w-4xl space-y-8">
-    <div>
-        <p class="text-sm text-eamn-700">{{ $course->programme->name }}</p>
-        <h1 class="mt-1 text-3xl font-semibold tracking-tight">{{ $course->title }}</h1>
-        @if ($course->description)
-            <p class="mt-3 text-gray-600">{{ $course->description }}</p>
-        @endif
-    </div>
+    <x-ui.page-head :register="$course->programme->name" :title="$course->title" />
+    @if ($course->description)
+        <p class="max-w-2xl leading-relaxed text-ink-600">{{ $course->description }}</p>
+    @endif
 
     @if ($course->learning_outcomes)
         <section>
-            <h2 class="h2">What you'll learn</h2>
-            <ul class="mt-2 list-inside list-disc space-y-1 text-gray-700">
+            <div class="register-rule"><h2 class="register shrink-0">What you'll learn</h2></div>
+            <ul class="mt-3 list-inside list-disc space-y-1 text-ink-700">
                 @foreach ($course->learning_outcomes as $outcome)
                     <li>{{ $outcome }}</li>
                 @endforeach
@@ -20,12 +17,12 @@
 
     @if ($modules->isNotEmpty())
         <section>
-            <h2 class="h2">Curriculum</h2>
-            <div class="mt-3 divide-y divide-gray-200 card">
+            <div class="register-rule"><h2 class="register shrink-0">Curriculum</h2></div>
+            <div class="ledger mt-3">
                 @foreach ($modules as $module)
-                    <div class="p-4">
-                        <h3 class="font-medium">{{ $module->title }}</h3>
-                        <ul class="mt-1 space-y-0.5 text-sm text-gray-500">
+                    <div class="px-5 py-4">
+                        <h3 class="text-sm font-semibold text-ink-900">{{ $module->title }}</h3>
+                        <ul class="mt-1.5 space-y-0.5 text-sm text-ink-500">
                             @foreach ($module->lessons as $lesson)
                                 <li>{{ $lesson->title }}</li>
                             @endforeach
@@ -37,17 +34,14 @@
     @endif
 
     <section>
-        <h2 class="h2">Enrolment options</h2>
+        <div class="register-rule"><h2 class="register shrink-0">Enrolment options</h2></div>
         <div class="mt-3 grid gap-4 sm:grid-cols-2">
             @foreach ($variants as $variant)
                 <div class="card-pad">
-                    <p class="font-medium">{{ $variant->name }}</p>
-                    <p class="text-sm text-gray-500">{{ ucfirst($variant->delivery_type) }}</p>
-                    <p class="mt-3 text-2xl font-semibold">{{ $variant->priceFormatted() }}</p>
-                    <a href="{{ route('checkout.show', $variant) }}"
-                       class="mt-4 block rounded-lg bg-eamn-700 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-eamn-800">
-                        Purchase course
-                    </a>
+                    <p class="font-semibold text-ink-900">{{ $variant->name }}</p>
+                    <p class="text-sm text-ink-500">{{ ucfirst($variant->delivery_type) }}</p>
+                    <p class="mt-3 font-display text-2xl font-semibold text-ink-950">{{ $variant->priceFormatted() }}</p>
+                    <a href="{{ route('checkout.show', $variant) }}" class="btn-primary mt-4 w-full">Purchase course</a>
                 </div>
             @endforeach
         </div>

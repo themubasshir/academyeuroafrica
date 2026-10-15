@@ -1,17 +1,19 @@
 <div class="space-y-6">
-    <h1 class="h1">Programmes</h1>
+    <x-ui.page-head register="Administration" title="Programmes" />
+
     <form wire:submit="create" class="card flex gap-3 p-4">
         <input wire:model="name" placeholder="New programme name" class="input flex-1" aria-label="New programme name">
         <button class="btn-primary">Create</button>
     </form>
-    <div class="divide-y divide-gray-200 card">
+
+    <div class="ledger">
         @foreach ($programmes as $p)
-            <div class="flex items-center justify-between px-5 py-4">
-                <div>
-                    <a href="{{ route('programme.show', $p) }}" class="font-medium text-eamn-700 hover:underline">{{ $p->name }}</a>
-                    <p class="text-xs text-gray-500">{{ $p->courses_count }} courses · {{ ucfirst($p->status) }}</p>
+            <div class="ledger-row">
+                <div class="min-w-0">
+                    <a href="{{ route('programme.show', $p) }}" class="font-semibold text-ink-900 hover:text-reg-700">{{ $p->name }}</a>
+                    <p class="text-xs text-ink-500">{{ $p->courses_count }} courses · {{ ucfirst($p->status) }}</p>
                 </div>
-                <button wire:click="toggleStatus({{ $p->id }})" class="text-sm text-gray-600 hover:text-gray-900">
+                <button wire:click="toggleStatus({{ $p->id }})" class="shrink-0 text-sm font-medium text-ink-600 hover:text-ink-900">
                     {{ $p->status === 'published' ? 'Unpublish' : 'Publish' }}
                 </button>
             </div>
