@@ -15,7 +15,7 @@ class EnrolmentPolicy
     public function view(User $user, Enrolment $enrolment): bool
     {
         if ($enrolment->user_id === $user->id) {
-            return true;
+            return $enrolment->isActive();
         }
 
         if ($user->hasRole('academy-admin')) {

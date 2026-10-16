@@ -11,11 +11,26 @@ class StudentAccountNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public string $title, public string $message, public ?string $actionUrl = null) {}
+    public function __construct(
+        public string $title,
+        public string $message,
+        public ?string $actionUrl = null,
+        public string $category = 'email',
+    ) {
+        $this->afterCommit = true;
+    }
 
     public function via(object $notifiable): array
     {
-        return ['database', 'mail'];
+        $channels = ['database'];
+        $preferences = $notifiable->notification_preferences ?? [];
+        $emailEnabled = $preferences[$this->category] ?? $preferences['email'] ?? true;
+
+        if ($emailEnabled) {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
     }
 
     public function toMail(object $notifiable): MailMessage

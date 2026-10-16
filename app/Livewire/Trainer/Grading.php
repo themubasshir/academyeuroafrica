@@ -6,6 +6,7 @@ use App\Domain\Certification\CertificateTrigger;
 use App\Models\Assignment;
 use App\Models\AssignmentGrade;
 use App\Models\Enrolment;
+use App\Notifications\StudentAccountNotification;
 use Livewire\Component;
 
 class Grading extends Component
@@ -27,14 +28,18 @@ class Grading extends Component
         $this->authorize('grade', $submission);
 
         $score = (int) ($this->scores[$submissionId] ?? 0);
-        abort_if($score > $this->assignment->max_points, 422, 'Score exceeds maximum.');
+        abort_if($score < 0 || $score > $this->assignment->max_points, 422, 'Score must be within the assignment range.');
+
+        $feedback = $this->feedbacks[$submissionId] ?? null;
+        $grade = AssignmentGrade::where('assignment_submission_id', $submissionId)->first();
+        $changed = $grade === null || $grade->score !== $score || $grade->feedback !== $feedback || $grade->status !== 'released';
 
         AssignmentGrade::updateOrCreate(
             ['assignment_submission_id' => $submissionId],
             [
                 'grader_id' => auth()->id(),
                 'score' => $score,
-                'feedback' => $this->feedbacks[$submissionId] ?? null,
+                'feedback' => $feedback,
                 'status' => 'released',
             ]
         );
@@ -45,6 +50,14 @@ class Grading extends Component
             ->first();
         if ($enrolment) {
             CertificateTrigger::for($enrolment);
+        }
+        if ($changed) {
+            $submission->user->notify(new StudentAccountNotification(
+                'Assignment grade released',
+                'Your grade for '.$this->assignment->title.' is now available.',
+                route('student.results'),
+                'assessments',
+            ));
         }
         session()->flash('saved', 'Grade released.');
     }

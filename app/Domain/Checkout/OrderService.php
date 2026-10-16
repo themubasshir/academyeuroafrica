@@ -238,6 +238,13 @@ class OrderService
                     $enrolment->update(['status' => 'refunded', 'expires_at' => now()]);
                 }
 
+                $order->user->notify(new StudentAccountNotification(
+                    'Refund completed',
+                    'Your refund for order '.$order->reference.' has been completed and course access has been suspended.',
+                    route('student.orders'),
+                    'refunds',
+                ));
+
                 AuditLog::record('order.refund.entitlements_suspended', $order, [
                     'refund_id' => $refund->id,
                     'enrolment_ids' => $enrolments->modelKeys(),

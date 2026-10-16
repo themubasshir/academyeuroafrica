@@ -75,6 +75,9 @@ class LiveSession extends Model
         // Whole-course session → any active enrolment on any variant.
         return Enrolment::where('user_id', $user->id)
             ->where('status', 'active')
+            ->where(function ($query) {
+                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
             ->whereHas('variant', fn ($q) => $q->where('course_id', $this->course_id))
             ->exists();
     }

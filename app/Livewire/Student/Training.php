@@ -32,8 +32,8 @@ class Training extends Component
     public function book(BookingService $service): void
     {
         $this->validate(['trainerId' => 'required|exists:users,id', 'slot' => 'required']);
-        $trainer = User::findOrFail($this->trainerId);
-        $start = Carbon::parse($this->slot);
+        $trainer = User::whereHas('roles', fn ($query) => $query->where('name', 'trainer'))->findOrFail($this->trainerId);
+        $start = Carbon::parse($this->slot, auth()->user()->timezone ?? 'UTC')->utc();
 
         $service->book(auth()->user(), $trainer, $start);
         $this->reset(['trainerId', 'slot']);

@@ -6,6 +6,7 @@ use App\Domain\Certification\CertificateTrigger;
 use App\Models\Enrolment;
 use App\Models\Quiz;
 use App\Models\QuizAnswer;
+use App\Notifications\StudentAccountNotification;
 use Livewire\Component;
 
 class QuizAttempts extends Component
@@ -22,14 +23,17 @@ class QuizAttempts extends Component
     {
         $a = QuizAnswer::where('id', $answerId)
             ->whereHas('attempt', fn ($q) => $q->where('quiz_id', $this->quiz->id))->firstOrFail();
+        abort_if($points < 0 || $points > $a->question->points, 422, 'Points must be within the question range.');
         $a->update(['awarded_points' => $points]);
     }
 
     public function finalise(int $attemptId): void
     {
         $attempt = $this->quiz->attempts()->findOrFail($attemptId);
+        $score = (int) $attempt->answers()->sum('awarded_points');
+        $changed = $attempt->status !== 'graded' || $attempt->score !== $score;
         $attempt->update([
-            'score' => (int) $attempt->answers()->sum('awarded_points'),
+            'score' => $score,
             'status' => 'graded',
         ]);
 
@@ -39,6 +43,14 @@ class QuizAttempts extends Component
             ->first();
         if ($enrolment) {
             CertificateTrigger::for($enrolment);
+        }
+        if ($changed) {
+            $attempt->user->notify(new StudentAccountNotification(
+                'Quiz result released',
+                'Your result for '.$this->quiz->title.' is now available.',
+                route('student.results'),
+                'assessments',
+            ));
         }
     }
 

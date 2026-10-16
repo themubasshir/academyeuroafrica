@@ -25,6 +25,9 @@ class Profile extends Component
         'email' => true,
         'classes' => true,
         'bookings' => true,
+        'assessments' => true,
+        'certificates' => true,
+        'refunds' => true,
     ];
 
     public function mount(): void
@@ -66,6 +69,9 @@ class Profile extends Component
             'notificationPreferences.email' => ['boolean'],
             'notificationPreferences.classes' => ['boolean'],
             'notificationPreferences.bookings' => ['boolean'],
+            'notificationPreferences.assessments' => ['boolean'],
+            'notificationPreferences.certificates' => ['boolean'],
+            'notificationPreferences.refunds' => ['boolean'],
         ]);
 
         auth()->user()->update(['notification_preferences' => $this->notificationPreferences]);

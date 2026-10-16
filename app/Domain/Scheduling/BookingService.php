@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\SessionCreditLedger;
 use App\Models\TrainerAvailability;
 use App\Models\User;
+use App\Notifications\StudentAccountNotification;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -63,6 +64,12 @@ class BookingService
             ]);
 
             AuditLog::record('appointment.booked', $appointment);
+            $student->notify(new StudentAccountNotification(
+                'Private training booked',
+                'Your session with '.$trainer->name.' is booked for '.$startsAt->copy()->setTimezone($student->timezone ?? 'UTC')->format('M j, Y g:i A T').'.',
+                route('student.training'),
+                'bookings',
+            ));
 
             return $appointment;
         });
@@ -71,6 +78,8 @@ class BookingService
     /** Cancel — returns the credit if within policy. */
     public function cancel(Appointment $appointment, User $by): Appointment
     {
+        abort_unless($by->isAdmin() || in_array($by->id, [$appointment->student_id, $appointment->trainer_id], true), 403);
+
         return DB::transaction(function () use ($appointment, $by) {
             $appointment = Appointment::lockForUpdate()->findOrFail($appointment->id);
             abort_unless($appointment->status === 'booked', 422, 'Appointment cannot be cancelled.');
@@ -92,6 +101,12 @@ class BookingService
             }
 
             AuditLog::record('appointment.cancelled', $appointment, ['by' => $by->id]);
+            $appointment->student->notify(new StudentAccountNotification(
+                'Private training cancelled',
+                'Your private training session on '.$appointment->starts_at->copy()->setTimezone($appointment->student->timezone ?? 'UTC')->format('M j, Y g:i A T').' has been cancelled.',
+                route('student.training'),
+                'bookings',
+            ));
 
             return $appointment;
         });

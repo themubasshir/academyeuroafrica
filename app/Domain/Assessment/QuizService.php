@@ -48,6 +48,8 @@ class QuizService
     /** Record or replace a single answer within the time window. */
     public function answer(QuizAttempt $attempt, int $questionId, array $optionIds = [], ?string $text = null): void
     {
+        abort_unless(! auth()->check() || auth()->id() === $attempt->user_id, 403);
+        abort_unless($this->enrolled($attempt->quiz, $attempt->user), 403, 'Course access is no longer active.');
         abort_unless($attempt->status === 'in_progress', 422, 'Attempt is closed.');
         abort_if($attempt->isExpired(), 422, 'Time limit exceeded.');
         abort_unless(in_array($questionId, $attempt->question_order ?? [], true), 422, 'Question not part of this attempt.');
@@ -64,6 +66,8 @@ class QuizService
      */
     public function submit(QuizAttempt $attempt): QuizAttempt
     {
+        abort_unless(! auth()->check() || auth()->id() === $attempt->user_id, 403);
+        abort_unless($this->enrolled($attempt->quiz, $attempt->user), 403, 'Course access is no longer active.');
         abort_unless($attempt->status === 'in_progress', 422, 'Attempt is closed.');
 
         return DB::transaction(function () use ($attempt) {
@@ -146,6 +150,9 @@ class QuizService
     {
         return Enrolment::where('user_id', $user->id)
             ->where('status', 'active')
+            ->where(function ($query) {
+                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
             ->whereHas('variant', fn ($q) => $q->where('course_id', $quiz->course_id))
             ->exists();
     }

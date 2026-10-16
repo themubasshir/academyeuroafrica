@@ -39,7 +39,8 @@ class AssignmentShow extends Component
 
     public function save(FileService $files): void
     {
-        abort_unless($this->submission->status !== 'graded', 422, 'Already graded.');
+        abort_unless($this->enrolment->isActive(), 403);
+        abort_unless(! in_array($this->submission->status, ['graded', 'submitted'], true), 422, 'Submission is already awaiting or has received grading.');
 
         $this->submission->update([
             'body' => $this->body,

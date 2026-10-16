@@ -28,6 +28,8 @@ class LessonShow extends Component
 
     public function savePosition(int $seconds): void
     {
+        abort_unless($this->enrolment->isActive(), 403);
+
         LessonProgress::updateOrCreate(
             ['enrolment_id' => $this->enrolment->id, 'lesson_id' => $this->lesson->id],
             ['position_seconds' => max(0, $seconds)]
@@ -36,6 +38,8 @@ class LessonShow extends Component
 
     public function markComplete(): void
     {
+        abort_unless($this->enrolment->isActive(), 403);
+
         LessonProgress::updateOrCreate(
             ['enrolment_id' => $this->enrolment->id, 'lesson_id' => $this->lesson->id],
             ['completed_at' => now()]

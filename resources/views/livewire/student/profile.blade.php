@@ -20,6 +20,9 @@
             <label class="flex items-center gap-3"><input wire:model="notificationPreferences.email" type="checkbox" class="h-4 w-4 rounded border-paper-300 text-reg-600"><span class="text-sm">Email updates about enrolments and certificates</span></label>
             <label class="flex items-center gap-3"><input wire:model="notificationPreferences.classes" type="checkbox" class="h-4 w-4 rounded border-paper-300 text-reg-600"><span class="text-sm">Upcoming live-class reminders</span></label>
             <label class="flex items-center gap-3"><input wire:model="notificationPreferences.bookings" type="checkbox" class="h-4 w-4 rounded border-paper-300 text-reg-600"><span class="text-sm">Private-training booking updates</span></label>
+            <label class="flex items-center gap-3"><input wire:model="notificationPreferences.assessments" type="checkbox" class="h-4 w-4 rounded border-paper-300 text-reg-600"><span class="text-sm">Assignment and quiz results</span></label>
+            <label class="flex items-center gap-3"><input wire:model="notificationPreferences.certificates" type="checkbox" class="h-4 w-4 rounded border-paper-300 text-reg-600"><span class="text-sm">Certificate updates</span></label>
+            <label class="flex items-center gap-3"><input wire:model="notificationPreferences.refunds" type="checkbox" class="h-4 w-4 rounded border-paper-300 text-reg-600"><span class="text-sm">Refund and access updates</span></label>
         </div>
         <button type="submit" class="btn-primary" wire:loading.attr="disabled">Save preferences</button>
     </form>

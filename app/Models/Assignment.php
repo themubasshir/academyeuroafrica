@@ -60,6 +60,9 @@ class Assignment extends Model
                 && GroupMember::where('group_id', $this->group_id)->where('user_id', $user->id)->exists(),
             default => Enrolment::where('user_id', $user->id)
                 ->where('status', 'active')
+                ->where(function ($query) {
+                    $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                })
                 ->whereHas('variant', fn ($q) => $q->where('course_id', $this->course_id))
                 ->exists(),
         };

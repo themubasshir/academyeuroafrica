@@ -33,11 +33,13 @@ class QuizTake extends Component
 
     public function start(QuizService $service): void
     {
+        abort_unless($this->enrolment->isActive(), 403);
         $this->attempt = $service->startAttempt($this->quiz, auth()->user());
     }
 
     public function submit(QuizService $service): void
     {
+        abort_unless($this->enrolment->isActive(), 403);
         abort_if($this->attempt === null, 422);
 
         foreach ($this->responses as $questionId => $response) {

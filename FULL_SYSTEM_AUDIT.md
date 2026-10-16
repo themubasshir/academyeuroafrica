@@ -2,7 +2,15 @@
 
 **Scope:** standalone Academy only. Joomla untouched. PayPal Live untouched. No production changes.
 
-**Audit basis:** code, routes, models, policies, services, migrations, views, tests, deployment docs, and direct verification of the working tree at commit `cf0b0d8` (latest completed audit commit). No Joomla files or production systems were modified.
+**Audit basis:** code, routes, models, policies, services, migrations, views, tests, deployment docs, and direct verification of the working tree at commit `aeb721c` plus the Phase 15D working tree. No Joomla files or production systems were modified.
+
+## Phase 15D update
+
+Phase 15D completed an audit and targeted extension of the existing trainer, learning, assessment, tutoring, certification, and notification workflows. Assigned-trainer course scoping, course/group/student live-session targeting, encrypted meeting URLs, attendance, lesson progress, material visibility, assignment submission and released grading, quiz attempt/scoring/release rules, tutoring credit-ledger booking and cancellation, eligibility-based certificates, QR verification, revocation, and retry-safe issuance were preserved rather than recreated.
+
+Learning actions now consistently reject suspended, refunded, and expired enrolments. Quiz answer and submission actions also reject a different authenticated student. Assignment submissions cannot be duplicated while awaiting grading, trainer grades and manual quiz points are range-bounded, and repeat release actions avoid duplicate grade/result notifications. Live-session targets are validated against the trainer's assigned course. Notifications now cover assignment grade release, manual quiz result release, live-session schedule/cancellation, tutoring booking/cancellation, full-refund entitlement suspension, and certificate issue/reissue. Database delivery is owner-scoped; queued mail respects category preferences while the in-app record remains available.
+
+Focused Phase 15D integrity coverage and the complete direct PHPUnit suite passed at 512 MB: **168 tests, 338 assertions**. Browser/viewport/accessibility and external-service staging verification remain required. Scheduled reminders are not implemented or claimed.
 
 ## Phase 15C update
 
@@ -96,27 +104,27 @@ Academy is **not launch-complete**. Main blockers:
 | Audit logs | **Partial** | Logs are recorded and viewable; no filtering/export/retention controls. |
 | Materials administration | **Implemented but not end-to-end tested** | Paginated private-material inventory, visibility filtering, authorized deletion, storage cleanup, and audit logging. |
 | Reports | **Implemented but not end-to-end tested** | Date-filtered student, enrolment, completion, order, revenue, refund, and certificate metrics from database records. |
-| Notifications administration | **Missing** | No notification center, mailables, notification classes, or preferences. |
+| Notifications administration | **Partial** | Student notification inbox, category preferences, queued database/mail notification class, and domain event wiring exist; trainer/admin notification administration is not a separate surface. |
 | Certificate administration | **Implemented but not end-to-end tested** | Manual issue, revoke, policy, and audit surfaces exist. |
 
 ## Student functionality
 
 | Feature | Status | Evidence / gap |
 |---|---|---|
-| Student dashboard | **Partial** | Component renders; limited operational summary. |
-| Purchased-course access | **Complete and verified** | Enrolment/course policies and access tests. |
-| Lessons and progress | **Implemented but not end-to-end tested** | `LessonShow` records position/completion; browser flow untested. |
+| Student dashboard | **Partial** | Component renders course, live-session, and assignment summaries; no dedicated recent-notifications panel. |
+| Purchased-course access | **Complete and verified** | Enrolment/course policies and access tests, including suspended/refunded/expired access rejection. |
+| Lessons and progress | **Implemented but not end-to-end tested** | `LessonShow` records position/completion only for active enrolments; browser flow untested. |
 | Private downloads | **Complete and verified** | Authorization tests. |
-| Live training/session view | **Implemented but not end-to-end tested** | `Student\Training` lists trainers and books/cancels appointments. |
-| Assignments | **Implemented but not end-to-end tested** | Submission component/service exists; browser and privacy edge cases need coverage. |
-| Quizzes | **Complete and verified** | Attempt lifecycle, score calculation, result-release privacy, focused tests. |
-| Results/grades | **Partial** | Results component exists; no complete student-facing history/status UX verified. |
+| Live training/session view | **Implemented but not end-to-end tested** | Targeted course/group/student sessions, encrypted meeting URLs, and active-entitlement visibility are implemented; browser flow untested. |
+| Assignments | **Implemented but not end-to-end tested** | Student submission is owner/course/entitlement scoped and cannot be overwritten while awaiting grading; browser flow remains untested. |
+| Quizzes | **Complete and verified** | Attempt lifecycle, entitlement checks, score calculation, result-release privacy, and cross-student answer protection are covered. |
+| Results/grades | **Implemented but not end-to-end tested** | Owner-scoped results and release notifications exist; complete browser history/status UX is unverified. |
 | Attendance | **Implemented but not end-to-end tested** | Trainer attendance recording exists; student visibility workflow needs verification. |
-| Tutoring bookings | **Implemented but not end-to-end tested** | Booking/cancellation and credit ledger exist. |
+| Tutoring bookings | **Implemented but not end-to-end tested** | UTC-backed availability, student-time-zone display, transaction-scoped overlap prevention, credit ledger, cancellation policy/audit, and booking/cancellation notifications exist. |
 | Appointment credit purchase/grant | **Partial** | Ledger service exists, but no caller grants credits; no admin UI or commerce entitlement mapping. |
-| Certificates/downloads | **Implemented but not end-to-end tested** | Issuance/PDF/download/QR/revocation code exists; queued production path unverified. |
-| Order/payment history | **Missing** | No student order-history or payment-history route/component. |
-| Profile/settings | **Missing** | No route/component. |
+| Certificates/downloads | **Implemented but not end-to-end tested** | Eligibility, issuance/PDF/download/QR/revocation code exists; issue/reissue notifications are queued and production queue path is unverified. |
+| Order/payment history | **Implemented but not end-to-end tested** | Student owner-scoped order/payment/refund history route/component exists; browser flow remains unverified. |
+| Profile/settings | **Implemented but not end-to-end tested** | Profile, timezone, email verification, password security, and notification preferences exist; browser flow remains unverified. |
 | Responsive/empty-state quality | **Implemented but not end-to-end tested** | Render smoke exists; no browser viewport/accessibility suite. |
 
 ## Trainer functionality
@@ -127,14 +135,14 @@ Academy is **not launch-complete**. Main blockers:
 | Assigned-course scope | **Complete and verified** | Policies check `TrainerAssignment`; academic privacy tests exist. |
 | Course/module/lesson management | **Implemented but not end-to-end tested** | `CourseManage` has substantive CRUD actions. |
 | Groups/students | **Implemented but not end-to-end tested** | Group CRUD and student listing exist. |
-| Session scheduling/cancellation | **Implemented but not end-to-end tested** | `Sessions` supports save/cancel. |
+| Session scheduling/cancellation | **Implemented but not end-to-end tested** | `Sessions` supports assigned-course-scoped schedule/cancel, validates group/student targets, and notifies the affected student audience. |
 | Attendance | **Implemented but not end-to-end tested** | Save flow exists; authorization and privacy need browser validation. |
-| Assignments/grading | **Implemented but not end-to-end tested** | Create, grade, return-for-revision, release flow exists. |
-| Quiz administration | **Implemented but not end-to-end tested** | Builder, publish, attempts, grading actions exist. |
+| Assignments/grading | **Implemented but not end-to-end tested** | Create, grade, return-for-revision, release flow, bounded scores, and idempotent release notification exist. |
+| Quiz administration | **Implemented but not end-to-end tested** | Builder, publish, attempts, bounded manual marking, finalise, and idempotent result notification exist. |
 | Resource visibility | **Implemented but not end-to-end tested** | Trainer-only material branch exists. |
 | Availability scheduling | **Implemented but not end-to-end tested** | Add/remove availability exists. |
 | Student performance monitoring | **Partial** | Student/attempt/certification views exist; no consolidated performance report. |
-| Trainer notifications | **Missing** | No notification system. |
+| Trainer notifications | **Partial** | Student-facing notification delivery is wired to trainer grading/session actions; a separate trainer notification inbox is not implemented. |
 
 ## Commerce and payments
 
@@ -149,9 +157,9 @@ Academy is **not launch-complete**. Main blockers:
 | Payment idempotency | **Complete and verified** | Unique payment event key, paid-order guard, enrolment `firstOrCreate`; focused webhook tests. |
 | Duplicate payment prevention | **Partial** | Event replay guarded, but gateway transaction uniqueness and concurrent payment-attempt policy need strengthening. |
 | Payment error recovery | **Partial** | Cancel leaves pending; return catches capture errors; no retry/reconciliation UI or customer notification. |
-| Refund service | **Partial** | `OrderService::refund()` calls gateway, bounds amounts, records `Refund`, logs audit. No admin UI, entitlement revocation, or refund reconciliation. |
-| Refund entitlement handling | **Missing** | Refund explicitly does not revoke access. Product policy and implementation absent. |
-| Order history | **Partial** | Admin model/list exists; student history missing. |
+| Refund service | **Implemented but not end-to-end tested** | `OrderService::refund()` calls gateway, bounds amounts, records `Refund`, logs audit, sends a queued student update, and suspends full-refund entitlements. |
+| Refund entitlement handling | **Implemented but not end-to-end tested** | Full refunds suspend linked enrolments and set expiry; partial refunds preserve access by documented policy. |
+| Order history | **Implemented but not end-to-end tested** | Admin and owner-scoped student history exist; browser and provider reconciliation remain. |
 | Recurring subscriptions | **Missing** | Only one-time PayPal CAPTURE flow. No subscription models, plans, billing retries, or cancellation. |
 | Institutional offers | **Partial** | Range/quote data exists as pending; no quote, invoice, approval, or institutional billing workflow. |
 | PayPal Live | **Blocked by explicit policy** | Must remain disabled. `PAYPAL_MODE=sandbox` required. |
@@ -160,13 +168,13 @@ Academy is **not launch-complete**. Main blockers:
 
 | Feature | Status | Evidence / gap |
 |---|---|---|
-| Lesson progression | **Implemented but not end-to-end tested** | Position/completion persistence and course access exist. |
-| Completion eligibility | **Complete and verified** | Eligibility service checks lessons, quizzes, assignments, attendance, trainer/admin approvals according to policy. |
-| Assignment submission/grading | **Implemented but not end-to-end tested** | Submission and grading services/components exist; browser flow absent. |
-| Quiz scoring | **Complete and verified** | Attempt lifecycle and scoring tests pass in prior run. |
+| Lesson progression | **Implemented but not end-to-end tested** | Position/completion persistence is limited to active enrolments; browser flow remains unverified. |
+| Completion eligibility | **Complete and verified** | Eligibility service checks lessons, quizzes, assignments, attendance, trainer/admin approvals according to policy; inactive enrolments cannot auto-issue certificates. |
+| Assignment submission/grading | **Implemented but not end-to-end tested** | Submission/grading components enforce owner, assigned trainer, active-entitlement, score-range, and duplicate-submission protections; browser flow absent. |
+| Quiz scoring | **Complete and verified** | Attempt lifecycle, active-entitlement enforcement, owner-only answers, scoring, and result release tests pass. |
 | Correct-answer privacy | **Complete and verified** | Result release rules prevent premature answer/result exposure. |
 | Attendance | **Implemented but not end-to-end tested** | Attendance model/component exists; edge-case coverage limited. |
-| Certificate issuance | **Implemented but not end-to-end tested** | Eligibility, queued job, PDF storage, audit trail. |
+| Certificate issuance | **Implemented but not end-to-end tested** | Eligibility, queued job, PDF storage, audit trail, idempotent issue/reissue, and student notifications. |
 | PDF layout | **Complete and verified** | Prior certificate layout fix and certification tests. Production font/storage validation remains. |
 | QR verification | **Complete and verified** | Non-sequential certificate reference and public verify route. |
 | Revocation | **Implemented but not end-to-end tested** | Admin revoke and public revoked status exist. |
@@ -260,7 +268,7 @@ Academy is **not launch-complete**. Main blockers:
 | Admin creates course | **Partial** | Admin creates, edits, publishes, archives course without DB access. |
 | Admin uploads lessons/resources | **Partial** | Admin or authorized trainer uploads, assigns visibility, replaces, deletes, downloads. |
 | Trainer schedules class | **Implemented but not end-to-end tested** | Assigned trainer creates session, capacity/time validation works, student sees it. |
-| Student registers | **Missing** | Registration or confirmed Joomla SSO acquisition path documented and tested. |
+| Student registers | **Implemented but not end-to-end tested** | Student-only local registration and email verification are implemented; external mail delivery and browser journey remain. |
 | Student purchases sandbox package | **Implemented but not end-to-end tested** | Approved fixed-price variant, PayPal sandbox capture, verified webhook, one order/enrolment. |
 | Correct enrolment | **Complete and verified** | Fulfilment uses order item and unique enrolment constraint. |
 | Lessons/progress | **Implemented but not end-to-end tested** | Unauthorized student blocked; completion persists across sessions. |
@@ -270,12 +278,12 @@ Academy is **not launch-complete**. Main blockers:
 | Certificate eligibility | **Implemented but not end-to-end tested** | All configured completion requirements and approvals enforced. |
 | Certificate issuance | **Implemented but not end-to-end tested** | Queue worker issues exactly one certificate; retry is safe. |
 | QR verification | **Complete and verified** | Valid, revoked, unknown, and tampered refs return correct results. |
-| Refund/revoked entitlement | **Broken/partial** | Refund must update payment, entitlement, access, audit, and user-visible status consistently. |
+| Refund/revoked entitlement | **Implemented but not end-to-end tested** | Full refunds update provider/refund state, suspend linked access, audit the change, and queue an owner-scoped student notification; staging provider reconciliation remains. |
 | Cross-student privacy | **Complete and verified in focused areas** | Policies/material tests cover core access; browser regression still required. |
 
 # 6. Test coverage
 
-Prior completed run at commit `45e9a0d`: **144 tests, 275 assertions, passing**. Coverage includes:
+Phase 15D direct verification on 2026-10-16: `php -d memory_limit=512M ./vendor/bin/phpunit` passed **168 tests, 338 assertions**. The normal Artisan test command remains subject to the known Dompdf child-process 128 MB constraint; direct PHPUnit is the successful full-suite command. Coverage includes:
 
 - login and role middleware
 - catalogue import and commercial approval
@@ -292,16 +300,16 @@ Prior completed run at commit `45e9a0d`: **144 tests, 275 assertions, passing**.
 - render smoke
 - deploy runner
 
-Phase 15A verification on 2026-10-16: `composer install --prefer-dist --no-interaction` restored the lockfile-pinned local development dependencies without changing Composer requirements. `php artisan test --compact` passed: **151 tests, 294 assertions, 0 failures** on local SQLite/PHP 8.3. The suite includes PayPal mode/configuration and refund-entitlement regression coverage plus deployment-runner expiry/replay coverage. Phase 15B adds administrator portal workflow coverage; MySQL remains an external staging verification requirement.
+The suite includes PayPal mode/configuration and refund-entitlement regression coverage, deployment-runner expiry/replay coverage, Phase 15B administrator workflow coverage, and Phase 15D learning-integrity coverage. MySQL remains an external staging verification requirement.
 
 Missing high-value tests:
 
 - browser-level checkout and PayPal sandbox flow
 - concurrent duplicate capture/payment attempts
-- refund plus entitlement revocation
-- MySQL migration and MySQL transaction behavior
-- queue retry/idempotency for certificate issuance
-- registration/recovery once implemented
+- refund plus entitlement revocation against PayPal Sandbox
+- MySQL migration and MySQL transaction behavior, including concurrent booking/payment attempts
+- queue retry/idempotency plus notification delivery for certificate issuance
+- registration/recovery browser and mail delivery workflows
 - responsive/accessibility checks
 - browser-level admin CRUD workflows
 - upload limits, MIME validation, oversized files, and malformed source documents
@@ -311,20 +319,19 @@ Missing high-value tests:
 
 ## P0 — launch safety
 
-1. Restore dev dependencies and rerun full suite.
-2. Verify MySQL migrations and production bootstrap in staging.
-3. Complete PayPal sandbox integration tests, including webhook and amount/currency integrity.
-4. Add gateway transaction uniqueness/concurrency protection.
-5. Define and implement refund entitlement policy; add admin action, audit, and tests.
-6. Validate queue worker, certificate retry, storage permissions, logs, backups, and deploy-runner retirement.
+1. Verify MySQL migrations and production bootstrap in staging.
+2. Complete PayPal sandbox integration tests, including webhook and amount/currency integrity.
+3. Validate gateway transaction uniqueness/concurrency protection under MySQL.
+4. Validate refund entitlement policy, admin action, audit, student notification, and reconciliation.
+5. Validate queue worker, certificate/notification retry, storage permissions, logs, backups, and deploy-runner retirement.
 
 **P0 acceptance:** no client-supplied amount affects order; duplicate callbacks create no duplicate payment/enrolment; refund state and access state agree; certificate jobs retry safely; production secrets/private files remain inaccessible.
 
 ## P1 — agreed Academy experience
 
 1. Complete admin CRUD: modules, lessons, material replacement, permission-level management, and remaining order/reconciliation operations. Programme/course/user/trainer-assignment/material inventory/enrolment workflows are implemented but require end-to-end browser verification.
-2. Add student registration/recovery/profile/settings and order/payment history, unless Joomla SSO is formally the sole acquisition/auth path.
-3. Add notification/mail system for purchase, payment pending/failure, enrolment, assignment, grading, booking, certificate, and refund events.
+2. Complete delivery of payment-pending/failure notifications and a dedicated dashboard recent-notifications panel.
+3. Add trainer/admin notification inboxes only if operationally required.
 4. Complete reports and operational dashboards.
 5. Finish trainer/student browser workflows and responsive/accessibility checks.
 6. Decide curriculum or enquiry-only status for empty course shells.
@@ -343,7 +350,7 @@ Missing high-value tests:
 # 8. Direct verification notes (2026-10-16)
 
 - Working tree: Phase 15A commit `69b8798`; Phase 15B administrator portal changes are currently uncommitted.
-- `php artisan route:list --except-vendor`: 21 routes registered. The expected authenticated student, trainer, and admin Livewire routes are present; checkout, webhook, certificate, file, bridge, and migration routes are also present.
+- Expected authenticated student, trainer, and admin Livewire routes are present, including student account, learning, tutoring, certificates, and trainer operations; checkout, webhook, certificate, file, bridge, and migration routes are also present.
 - `bootstrap/app.php` registers `SecurityHeaders` on the web middleware stack and aliases `active`/`role`; this previously unverified security control is confirmed in code.
 - `composer show --direct`: Laravel 13.36.0, Livewire 4.4.7, Dompdf 3.1.2, Endroid QR Code 6.0.9. The installed vendor tree omits development packages despite `composer.json` declaring PHPUnit 12.5 and Pint 1.27 under `require-dev`.
 - `php artisan migrate:status`: all migrations, including the commercial catalogue migrations, are applied to the local SQLite database. This does not validate MySQL compatibility or production execution.
@@ -351,7 +358,7 @@ Missing high-value tests:
 - Payment initiation now locks the pending order and reuses an existing initiated checkout transaction, reducing duplicate provider orders. Webhook/event and enrolment uniqueness constraints remain in force; MySQL concurrency verification is still required.
 - Refund processing now requires provider `COMPLETED`/`PENDING` status, stores provider and idempotency data, records audit events, suspends only order-linked enrolments on a completed full refund, and preserves access for partial refunds by documented policy. Admin Orders exposes the authorised refund action. Duplicate refund attempts reuse the idempotency record.
 - Phase 15B adds administrator programme and course lifecycle editing, trainer assignment, searchable role-filtered user administration, last-super-admin safeguards, manual non-commercial enrolment management, a private-material inventory/deletion surface, and database-backed operational reports. Modules, lessons, uploads, replacement, ordering, and private audience controls remain in the existing authorised trainer course-management workflow; imported `source_key` fields are not editable through the new administration forms.
-- There are no `app/Notifications`, `app/Events`, or `app/Listeners` directories, and no student order/history/profile/recovery routes. These are confirmed missing rather than merely unverified.
+- Phase 15C/15D provide `app/Notifications`, student order/history/profile/recovery routes, a notification inbox, notification preferences, and queued database/mail delivery. Phase 15D additionally wires assignment grade, manual quiz result, live-session schedule/cancellation, tutoring booking/cancellation, full-refund entitlement change, and certificate issue/reissue notifications. No scheduled reminder job exists.
 
 # 9. External dependencies
 
@@ -359,8 +366,8 @@ Missing high-value tests:
 - MySQL production database.
 - PayPal sandbox credentials, webhook registration, and reachable HTTPS callback.
 - Joomla bridge plugin, client ID, secret, and lifecycle event emitter.
-- SMTP provider if notifications are enabled.
-- Cron execution for scheduler and database queue worker.
+- SMTP provider and configured from address for queued mail notifications.
+- Cron execution for database queue worker; scheduled reminders are not implemented.
 - PHP 8.3 extensions and writable private storage.
 - Product decisions for empty course shells, prices/ranges, refund access policy, and institutional offers.
 

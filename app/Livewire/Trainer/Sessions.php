@@ -5,6 +5,8 @@ namespace App\Livewire\Trainer;
 use App\Models\Course;
 use App\Models\Enrolment;
 use App\Models\LiveSession;
+use App\Models\User;
+use App\Notifications\StudentAccountNotification;
 use Illuminate\Support\Carbon;
 use Livewire\Component;
 
@@ -44,7 +46,20 @@ class Sessions extends Component
             'audience' => 'required|in:course,group,student',
         ]);
 
-        LiveSession::create([
+        if ($this->audience === 'group') {
+            abort_unless($this->course->groups()->whereKey($this->groupId)->exists(), 422, 'Group is not part of this course.');
+        }
+        if ($this->audience === 'student') {
+            abort_unless(Enrolment::where('user_id', $this->studentId)
+                ->where('status', 'active')
+                ->where(function ($query) {
+                    $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                })
+                ->whereHas('variant', fn ($query) => $query->where('course_id', $this->course->id))
+                ->exists(), 422, 'Student is not actively enrolled in this course.');
+        }
+
+        $session = LiveSession::create([
             'course_id' => $this->course->id,
             'trainer_id' => auth()->id(),
             'group_id' => $this->audience === 'group' ? $this->groupId : null,
@@ -57,14 +72,42 @@ class Sessions extends Component
             'status' => 'scheduled',
         ]);
 
+        $this->notifySessionAudience($session, 'Live training scheduled', 'A live training session has been scheduled: '.$session->title.'.');
+
         $this->reset(['title', 'startsAt', 'meetingUrl', 'groupId', 'studentId']);
         session()->flash('saved', 'Session scheduled.');
     }
 
     public function cancel(int $id): void
     {
-        LiveSession::where('id', $id)->where('course_id', $this->course->id)
-            ->update(['status' => 'cancelled']);
+        $session = LiveSession::where('id', $id)->where('course_id', $this->course->id)->firstOrFail();
+        if ($session->status === 'cancelled') {
+            return;
+        }
+
+        $session->update(['status' => 'cancelled']);
+        $this->notifySessionAudience($session, 'Live training cancelled', 'The live training session '.$session->title.' has been cancelled.');
+    }
+
+    private function notifySessionAudience(LiveSession $session, string $title, string $message): void
+    {
+        $recipients = match (true) {
+            $session->student_id !== null => User::whereKey($session->student_id),
+            $session->group_id !== null => $session->group()->firstOrFail()->members(),
+            default => User::whereHas('enrolments', fn ($query) => $query
+                ->where('status', 'active')
+                ->where(function ($query) {
+                    $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                })
+                ->whereHas('variant', fn ($query) => $query->where('course_id', $session->course_id))),
+        };
+
+        $recipients->get()->each(fn (User $student) => $student->notify(new StudentAccountNotification(
+            $title,
+            $message,
+            route('student.dashboard'),
+            'classes',
+        )));
     }
 
     public function render()

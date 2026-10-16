@@ -7,6 +7,7 @@ use App\Models\CertificateAudit;
 use App\Models\CertificationPolicy;
 use App\Models\Enrolment;
 use App\Models\User;
+use App\Notifications\StudentAccountNotification;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
@@ -34,6 +35,10 @@ class CertificateIssuanceService
      */
     public function issueIfEligible(Enrolment $enrolment, ?User $actor = null, bool $force = false): Certificate|array
     {
+        if (! $enrolment->isActive() && ! $force) {
+            return ['status' => 'inactive_enrolment', 'checks' => [], 'percent' => null];
+        }
+
         $result = $this->eligibility->evaluate($enrolment);
 
         if ($result['status'] === 'disabled') {
@@ -99,6 +104,12 @@ class CertificateIssuanceService
         }
 
         $this->audit($cert, 'issued', $actor ? "by {$actor->email}" : 'automatic');
+        $user->notify(new StudentAccountNotification(
+            'Certificate issued',
+            'Your certificate for '.$course->title.' is now available.',
+            route('student.certificates'),
+            'certificates',
+        ));
 
         return $cert->fresh();
     }
@@ -154,6 +165,12 @@ class CertificateIssuanceService
         }
 
         $this->audit($new, 'reissued', "by {$actor->email}: {$reason}");
+        $new->user->notify(new StudentAccountNotification(
+            'Certificate reissued',
+            'A corrected certificate for '.$new->course_title.' is now available.',
+            route('student.certificates'),
+            'certificates',
+        ));
 
         return $new->fresh();
     }
