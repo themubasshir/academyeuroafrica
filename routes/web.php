@@ -166,6 +166,8 @@ Route::middleware(['auth', 'active', 'role:super-admin,academy-admin'])
         Route::livewire('users', 'admin.users')->name('users');
         Route::livewire('orders', 'admin.orders')->name('orders');
         Route::livewire('enrolments', 'admin.enrolments')->name('enrolments');
+        Route::livewire('materials', 'admin.materials')->name('materials');
+        Route::livewire('reports', 'admin.reports')->name('reports');
         Route::livewire('integrations', 'admin.integrations')->name('integrations');
         Route::livewire('audit-logs', 'admin.audit-logs')->name('audit-logs');
         Route::livewire('certificates', 'admin.certificates')->name('certificates');

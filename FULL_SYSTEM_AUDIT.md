@@ -80,15 +80,16 @@ Academy is **not launch-complete**. Main blockers:
 
 | Feature | Status | Evidence / gap |
 |---|---|---|
-| Admin dashboard | **Partial** | Route/view exists; component only renders. No operational metrics/actions. |
-| Admin users | **Partial** | Activate/deactivate only. Cannot edit user data, roles, trainer assignments, password, or deletion state. |
-| Roles and permissions | **Partial** | Roles/middleware/policies exist; no admin permission-management UI. |
-| Admin enrolments | **Partial** | List view exists; no complete manual enrol/revoke/transfer workflow. |
-| Admin orders | **Partial** | List view exists; no refund action or payment reconciliation UI. |
+| Admin dashboard | **Implemented but not end-to-end tested** | Live registry totals and links to operational management, materials, reports, and commerce surfaces. |
+| Admin users | **Implemented but not end-to-end tested** | Search/filter, profile editing, role and trainer assignment controls, activation, and last-super-admin safeguards. |
+| Roles and permissions | **Partial** | Roles/middleware/policies exist; role assignment is available, but no separate permission-management UI. |
+| Admin enrolments | **Implemented but not end-to-end tested** | Search/filter, manual grants, suspension/restoration, expiry, audit records, and protection for commercial/refunded entitlements. |
+| Admin orders | **Complete and verified** | Order list and administrator-authorized provider-verified refund workflow with entitlement reconciliation. |
 | Admin packages/pricing | **Complete and verified** | `/admin/packages` supports edit, approve, unapprove, publish controls; purchase gate rechecks server-side. |
 | Integration settings | **Partial** | Status display exists; no complete settings editor or credential rotation workflow. |
 | Audit logs | **Partial** | Logs are recorded and viewable; no filtering/export/retention controls. |
-| Reports | **Missing** | No report component or report route found. |
+| Materials administration | **Implemented but not end-to-end tested** | Paginated private-material inventory, visibility filtering, authorized deletion, storage cleanup, and audit logging. |
+| Reports | **Implemented but not end-to-end tested** | Date-filtered student, enrolment, completion, order, revenue, refund, and certificate metrics from database records. |
 | Notifications administration | **Missing** | No notification center, mailables, notification classes, or preferences. |
 | Certificate administration | **Implemented but not end-to-end tested** | Manual issue, revoke, policy, and audit surfaces exist. |
 
@@ -285,7 +286,7 @@ Prior completed run at commit `45e9a0d`: **144 tests, 275 assertions, passing**.
 - render smoke
 - deploy runner
 
-Phase 15A verification on 2026-10-16: `composer install --prefer-dist --no-interaction` restored the lockfile-pinned local development dependencies without changing Composer requirements. `php artisan test --compact` passed: **149 tests, 289 assertions, 0 failures** on local SQLite/PHP 8.3. The suite now includes PayPal mode/configuration and refund-entitlement regression coverage plus deployment-runner expiry/replay coverage. MySQL remains an external staging verification requirement.
+Phase 15A verification on 2026-10-16: `composer install --prefer-dist --no-interaction` restored the lockfile-pinned local development dependencies without changing Composer requirements. `php artisan test --compact` passed: **151 tests, 294 assertions, 0 failures** on local SQLite/PHP 8.3. The suite includes PayPal mode/configuration and refund-entitlement regression coverage plus deployment-runner expiry/replay coverage. Phase 15B adds administrator portal workflow coverage; MySQL remains an external staging verification requirement.
 
 Missing high-value tests:
 
@@ -296,7 +297,7 @@ Missing high-value tests:
 - queue retry/idempotency for certificate issuance
 - registration/recovery once implemented
 - responsive/accessibility checks
-- admin CRUD workflows
+- browser-level admin CRUD workflows
 - upload limits, MIME validation, oversized files, and malformed source documents
 - production-like private storage and cPanel path smoke tests
 
@@ -315,7 +316,7 @@ Missing high-value tests:
 
 ## P1 — agreed Academy experience
 
-1. Complete admin CRUD: programmes, courses, modules, lessons, materials, users, roles, trainer assignments, enrolments, orders/refunds.
+1. Complete admin CRUD: modules, lessons, material replacement, permission-level management, and remaining order/reconciliation operations. Programme/course/user/trainer-assignment/material inventory/enrolment workflows are implemented but require end-to-end browser verification.
 2. Add student registration/recovery/profile/settings and order/payment history, unless Joomla SSO is formally the sole acquisition/auth path.
 3. Add notification/mail system for purchase, payment pending/failure, enrolment, assignment, grading, booking, certificate, and refund events.
 4. Complete reports and operational dashboards.
@@ -335,7 +336,7 @@ Missing high-value tests:
 
 # 8. Direct verification notes (2026-10-16)
 
-- Working tree: commit `cf0b0d8`; clean before this documentation update.
+- Working tree: Phase 15A commit `69b8798`; Phase 15B administrator portal changes are currently uncommitted.
 - `php artisan route:list --except-vendor`: 21 routes registered. The expected authenticated student, trainer, and admin Livewire routes are present; checkout, webhook, certificate, file, bridge, and migration routes are also present.
 - `bootstrap/app.php` registers `SecurityHeaders` on the web middleware stack and aliases `active`/`role`; this previously unverified security control is confirmed in code.
 - `composer show --direct`: Laravel 13.36.0, Livewire 4.4.7, Dompdf 3.1.2, Endroid QR Code 6.0.9. The installed vendor tree omits development packages despite `composer.json` declaring PHPUnit 12.5 and Pint 1.27 under `require-dev`.
@@ -343,6 +344,7 @@ Missing high-value tests:
 - Phase 15A corrected PayPal live detection to require explicit `PAYPAL_MODE=live`; sandbox and invalid modes fail closed, incomplete credentials are rejected before HTTP, and the admin Integrations view reports the configured environment.
 - Payment initiation now locks the pending order and reuses an existing initiated checkout transaction, reducing duplicate provider orders. Webhook/event and enrolment uniqueness constraints remain in force; MySQL concurrency verification is still required.
 - Refund processing now requires provider `COMPLETED`/`PENDING` status, stores provider and idempotency data, records audit events, suspends only order-linked enrolments on a completed full refund, and preserves access for partial refunds by documented policy. Admin Orders exposes the authorised refund action. Duplicate refund attempts reuse the idempotency record.
+- Phase 15B adds administrator programme and course lifecycle editing, trainer assignment, searchable role-filtered user administration, last-super-admin safeguards, manual non-commercial enrolment management, a private-material inventory/deletion surface, and database-backed operational reports. Modules, lessons, uploads, replacement, ordering, and private audience controls remain in the existing authorised trainer course-management workflow; imported `source_key` fields are not editable through the new administration forms.
 - There are no `app/Notifications`, `app/Events`, or `app/Listeners` directories, and no student order/history/profile/recovery routes. These are confirmed missing rather than merely unverified.
 
 # 9. External dependencies

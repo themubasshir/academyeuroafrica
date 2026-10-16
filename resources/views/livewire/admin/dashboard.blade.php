@@ -18,6 +18,8 @@
                 ['Courses', 'admin.courses', 'Manage course records'],
                 ['Users', 'admin.users', 'Accounts and roles'],
                 ['Enrolments', 'admin.enrolments', 'Student enrolment register'],
+                ['Materials', 'admin.materials', 'Private learning resources'],
+                ['Reports', 'admin.reports', 'Participation and finance'],
                 ['Orders', 'admin.orders', 'Payments and fulfilment'],
                 ['Integrations', 'admin.integrations', 'PayPal and Joomla status'],
                 ['Audit logs', 'admin.audit-logs', 'Change history'],
