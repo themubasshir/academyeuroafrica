@@ -3,7 +3,12 @@
 use App\Http\Controllers\Auth\BridgeConsumeController;
 use App\Http\Controllers\Auth\BridgeEventsController;
 use App\Http\Controllers\Auth\BridgeStartController;
+use App\Http\Controllers\Auth\EmailVerificationController;
+use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Deploy\MigrateRunnerController;
@@ -41,6 +46,26 @@ Route::middleware('guest')->group(function () {
     Route::post('login', [LoginController::class, 'store'])
         ->middleware('throttle:5,1')
         ->name('login.store');
+    Route::get('register', [RegisterController::class, 'create'])->name('register');
+    Route::post('register', [RegisterController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('register.store');
+    Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
+    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('password.email');
+    Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
+    Route::post('reset-password', [NewPasswordController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('password.store');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
+    Route::get('email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
+    Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
+        ->middleware('throttle:6,1')->name('verification.send');
 });
 
 Route::post('logout', [LoginController::class, 'destroy'])
@@ -61,17 +86,21 @@ Route::post('auth/bridge/events', BridgeEventsController::class)
 // Authenticated areas — every privileged area is behind role middleware AND
 // the `active` middleware so disabled accounts are dropped immediately.
 Route::middleware(['auth', 'active'])->group(function () {
-    Route::livewire('dashboard', 'student.dashboard')
-        ->name('student.dashboard');
+    Route::middleware('verified')->group(function () {
+        Route::livewire('dashboard', 'student.dashboard')->name('student.dashboard');
 
-    // Student course workspace (authorisation scoped inside components)
-    Route::livewire('learn/{enrolment}', 'student.course-show')->name('learn.course');
-    Route::livewire('learn/{enrolment}/lesson/{lesson}', 'student.lesson-show')->name('learn.lesson');
-    Route::livewire('learn/{enrolment}/assignment/{assignment}', 'student.assignment-show')->name('learn.assignment');
-    Route::livewire('learn/{enrolment}/quiz/{quiz}', 'student.quiz-take')->name('learn.quiz');
-    Route::livewire('my/results', 'student.results')->name('student.results');
-    Route::livewire('my/training', 'student.training')->name('student.training');
-    Route::livewire('my/certificates', 'student.certificates')->name('student.certificates');
+        // Student course workspace (authorisation scoped inside components)
+        Route::livewire('learn/{enrolment}', 'student.course-show')->name('learn.course');
+        Route::livewire('learn/{enrolment}/lesson/{lesson}', 'student.lesson-show')->name('learn.lesson');
+        Route::livewire('learn/{enrolment}/assignment/{assignment}', 'student.assignment-show')->name('learn.assignment');
+        Route::livewire('learn/{enrolment}/quiz/{quiz}', 'student.quiz-take')->name('learn.quiz');
+        Route::livewire('my/results', 'student.results')->name('student.results');
+        Route::livewire('my/training', 'student.training')->name('student.training');
+        Route::livewire('my/certificates', 'student.certificates')->name('student.certificates');
+    });
+    Route::livewire('my/profile', 'student.profile')->name('student.profile');
+    Route::livewire('my/orders', 'student.orders')->name('student.orders');
+    Route::livewire('my/notifications', 'student.notifications')->name('student.notifications');
     Route::get('my/certificates/{certificate}/download', [CertificateController::class, 'download'])
         ->name('student.certificates.download');
 

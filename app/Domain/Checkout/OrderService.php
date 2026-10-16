@@ -11,6 +11,7 @@ use App\Models\PaymentEvent;
 use App\Models\PaymentTransaction;
 use App\Models\Refund;
 use App\Models\User;
+use App\Notifications\StudentAccountNotification;
 use App\Services\Payments\Contracts\PaymentGateway;
 use App\Services\Payments\PaymentManager;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -160,10 +161,18 @@ class OrderService
             $order->update(['status' => 'paid']);
 
             foreach ($order->items as $item) {
-                Enrolment::firstOrCreate(
+                $enrolment = Enrolment::firstOrCreate(
                     ['user_id' => $order->user_id, 'course_variant_id' => $item->course_variant_id],
                     ['order_id' => $order->id, 'status' => 'active', 'enrolled_at' => now()]
                 );
+
+                if ($enrolment->wasRecentlyCreated) {
+                    $order->user->notify(new StudentAccountNotification(
+                        'Enrolment confirmed',
+                        'Your enrolment in '.$item->name.' is now active.',
+                        route('student.dashboard'),
+                    ));
+                }
             }
 
             PaymentEvent::where('gateway_event_id', $event['event_id'])->update(['processed_at' => now()]);

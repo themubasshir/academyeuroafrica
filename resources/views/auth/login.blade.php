@@ -55,6 +55,7 @@
                         <button type="submit" class="btn-secondary btn-sm">Sign in</button>
                     </div>
                 </form>
+                <div class="mt-4 flex justify-between text-sm"><a href="{{ route('password.request') }}" class="text-reg-700 underline">Forgot password?</a><a href="{{ route('register') }}" class="text-reg-700 underline">Create student account</a></div>
             </div>
 
             {{-- Registry footer line --}}

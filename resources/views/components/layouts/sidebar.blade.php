@@ -22,6 +22,9 @@
             ['My Results', 'student.results', 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10'],
             ['Private Training', 'student.training', 'M16 7a4 4 0 11-8 0 4 4 0 018 0M12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
             ['My Certificates', 'student.certificates', 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+            ['Order History', 'student.orders', 'M3 3h18v18H3z'],
+            ['Notifications', 'student.notifications', 'M15 17h5l-1-2V9a7 7 0 00-14 0v6l-1 2h5'],
+            ['My Profile', 'student.profile', 'M15 11a3 3 0 10-6 0 3 3 0 006 0z'],
         ],
     };
     $role = $user->isAdmin() ? 'Administration' : ($user->isTrainer() ? 'Trainer' : 'Student');

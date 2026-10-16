@@ -4,6 +4,12 @@
 
 **Audit basis:** code, routes, models, policies, services, migrations, views, tests, deployment docs, and direct verification of the working tree at commit `cf0b0d8` (latest completed audit commit). No Joomla files or production systems were modified.
 
+## Phase 15C update
+
+Phase 15C adds public student-only registration, local email verification, throttled password-reset flows, intended-URL-preserving login, profile/contact/time-zone editing, verified email changes, password/session security, notification preferences, owner-scoped order history, and database/mail-backed student notifications. The `notifications` table and `users.notification_preferences` migration must be applied. Configure a production `MAIL_MAILER` and run the configured database queue worker for mail-backed notifications; database notifications remain available when delivery is retried by the queue.
+
+No Joomla code, production infrastructure, PayPal Live setting, or live transaction was changed.
+
 ## Executive result
 
 Academy has solid domain foundations: role-gated portal, catalogue, course access, private files, quizzes, assignments, attendance, certificates, PayPal webhook processing, Joomla bridge, and commercial approval gates.
@@ -11,10 +17,10 @@ Academy has solid domain foundations: role-gated portal, catalogue, course acces
 Academy is **not launch-complete**. Main blockers:
 
 - Admin cannot manage full catalogue, users, roles, materials, refunds, reports, or settings through UI.
-- Student registration, password recovery, profile/settings, order history, and payment history are missing.
-- Trainer and student flows lack end-to-end browser verification.
-- Refund service exists, but no admin refund UI and no entitlement-revocation workflow.
-- Notifications/mail delivery absent.
+- Browser-level responsive, accessibility, and complete student workflow verification remains.
+- Student registration, email verification, password recovery, profile/security settings, notification preferences, order history, and in-app notifications are implemented; external mail and queue configuration remain deployment requirements.
+- Student payment history is scoped to the authenticated owner and displays order/payment/refund status without provider secrets.
+- Refund service and entitlement revocation are implemented; student notifications are idempotent for newly-created enrolments.
 - Queue worker and scheduler require external cron configuration.
 - Course video management and secure playback are incomplete.
 - PayPal capture/webhook integrity needs production sandbox validation.
