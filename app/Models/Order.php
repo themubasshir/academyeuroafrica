@@ -31,6 +31,16 @@ class Order extends Model
         return $this->hasMany(PaymentTransaction::class);
     }
 
+    public function refundedCents(): int
+    {
+        return (int) $this->transactions()
+            ->with('refunds')
+            ->get()
+            ->flatMap(fn (PaymentTransaction $transaction) => $transaction->refunds)
+            ->where('status', 'completed')
+            ->sum('amount_cents');
+    }
+
     public function isPaid(): bool
     {
         return $this->status === 'paid';

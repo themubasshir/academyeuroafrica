@@ -27,6 +27,10 @@ class PaymentManager
         $gateway = $this->gateways()[$name]
             ?? throw new RuntimeException("Unknown payment gateway: {$name}");
 
+        if ($gateway instanceof PayPalGateway && ! $gateway->isConfigured()) {
+            throw new RuntimeException('PayPal is not completely configured.');
+        }
+
         if (app()->environment('production') && ! $gateway->isLive()) {
             throw new RuntimeException("Gateway {$name} is not permitted in production.");
         }

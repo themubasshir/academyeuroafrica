@@ -37,12 +37,29 @@ class PayPalGateway implements PaymentGateway
 
     public function isLive(): bool
     {
-        return true;
+        return config('services.paypal.mode') === 'live';
+    }
+
+    public function isConfigured(): bool
+    {
+        return in_array(config('services.paypal.mode'), ['sandbox', 'live'], true)
+            && filled(config('services.paypal.client_id'))
+            && filled(config('services.paypal.client_secret'))
+            && filled(config('services.paypal.webhook_id'));
+    }
+
+    public function environment(): string
+    {
+        return match (config('services.paypal.mode')) {
+            'sandbox' => 'Sandbox',
+            'live' => 'Live',
+            default => 'Invalid configuration',
+        };
     }
 
     public function baseUrl(): string
     {
-        return config('services.paypal.mode', 'sandbox') === 'live'
+        return config('services.paypal.mode') === 'live'
             ? self::LIVE
             : self::SANDBOX;
     }

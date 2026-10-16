@@ -69,9 +69,9 @@ Do **not** run `config:cache` locally — it bakes local env into the artefact. 
    DEPLOY_ALLOWED_IPS=<your public IP>
    ```
    Generate `APP_KEY` on host via `php artisan key:generate` (run from app dir).
-5. Create `storage/app/deploy.token` with a one-time secret for the migration runner.
-6. `POST https://academy.euroafricamedia.eu/deploy/migrate` with `{token, run:"migrate --force"}` → runs once, writes `deploy.done`, refuses again.
-7. `POST .../deploy/migrate` `{token, run:"db:seed --class=RoleSeeder --force"}` (second call needs flag removed — see note) **or** run `php artisan db:seed --class=RoleSeeder` via cPanel cron one-shot / `exec`-capable probe.
+5. Create `storage/app/deploy.token` with a random one-time secret for the migration runner. Keep it in private `storage/app`; never place it in the web root.
+6. `POST https://academy.euroafricamedia.eu/deploy/migrate` with `{token, expires_at, run:"migrate --force"}`, where `expires_at` is an ISO-8601 timestamp in the near future. The request must originate from `DEPLOY_ALLOWED_IPS`; a successful run consumes the token and writes its command marker.
+7. For each additional allowed command, create a **new** one-time token and make a separate non-expired request, for example `{token, expires_at, run:"db:seed --class=RoleSeeder --force"}`. Do not delete completion markers to replay commands; use cPanel cron/CLI instead when a command must be deliberately rerun.
 8. `php artisan config:cache route:cache view:cache` on host (cron one-shot or probe).
 9. Verify `/up`, `/` → `/login`, assets, then PayPal sandbox round-trip.
 
@@ -85,7 +85,7 @@ Do **not** run `config:cache` locally — it bakes local env into the artefact. 
 ```
 
 ## Migration runner (no SSH)
-`POST deploy/migrate` — IP allowlist + single-use token + self-disabling flag + command allowlist (`migrate --force`, `db:seed --class=RoleSeeder --force`) + audit log. Each successful call writes `storage/app/deploy.done`; to run again (e.g. the seeder) delete that flag file via File Manager first.
+`POST deploy/migrate` is a temporary, fixed-allowlist endpoint. It requires the configured source IP, a one-time token, a future `expires_at` timestamp, and an execution lock. It never accepts arbitrary Artisan input. A successful command consumes `storage/app/deploy.token` and writes `deploy.done.<md5(command)>`; replay is denied. After production synchronisation, remove the token and disable/remove the route in the next release. Never delete completion markers or leave the runner enabled as a general deployment mechanism.
 
 ## Secrets & gateway safety
 - Test gateway gated to `local`/`testing` env — routes not registered on prod.

@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -14,13 +15,14 @@ use Illuminate\Support\Facades\Storage;
  *
  * Guard stack (ALL required):
  *  - request IP in DEPLOY_ALLOWED_IPS
- *  - valid `token` equal to the single-use hash in storage/app/deploy.token
- *  - the specific command not already run (per-command flag file)
+ *  - valid `token` equal to the one-time secret in storage/app/deploy.token
+ *  - a non-expired `expires_at` request timestamp
+ *  - the token has not already been consumed
  *  - only a fixed allowlist of commands can run — never arbitrary input
  *  - every attempt is audit-logged
  *
- * Each allowed command writes `deploy.done.<md5>` on success so it cannot run
- * again until that flag is deliberately removed during the next deploy.
+ * Each successful request consumes the token and writes
+ * `deploy.done.<md5>` so it cannot be replayed until a new token is installed.
  */
 class MigrateRunnerController extends Controller
 {
@@ -44,39 +46,46 @@ class MigrateRunnerController extends Controller
         $disk = Storage::disk('local');
 
         $expected = $disk->exists('deploy.token') ? trim($disk->get('deploy.token')) : '';
-        $token = $request->string('token');
-        abort_if($expected === '' || ! hash_equals($expected, $token->toString()), 404);
+        $token = $request->string('token')->toString();
+        abort_if($expected === '' || $token === '' || ! hash_equals($expected, $token), 404);
+
+        $expiresAt = $request->date('expires_at');
+        abort_if($expiresAt === null || $expiresAt->isPast(), 404);
 
         $command = $request->string('run', 'migrate --force')->toString();
         abort_unless(in_array($command, self::ALLOWED, true), 422, 'Command not allowed.');
 
-        // Per-command once-guard: each allowed command runs once per deploy
-        // window. Idempotent catalogue commands may be re-run by deleting the
-        // matching flag file via File Manager.
-        $flag = 'deploy.done.'.md5($command);
-        abort_if($disk->exists($flag), 404);
+        $lock = Cache::lock('deploy-migrate-runner', 120);
+        abort_unless($lock->get(), 429, 'Another deployment command is running.');
 
-        AuditLog::record('deploy.migrate', null, ['command' => $command, 'ip' => $request->ip()]);
+        try {
+            $flag = 'deploy.done.'.md5($command);
+            abort_if($disk->exists($flag), 404);
 
-        [$cmd, $args] = array_pad(explode(' ', $command, 2), 2, '');
-        // Translate "--flag[=v] --class=X" tokens into Artisan's --flag params.
-        $params = ['--force' => true];
-        foreach (preg_split('/\s+/', trim($args)) as $tok) {
-            if (preg_match('/^--([a-zA-Z-]+)(?:=(.*))?$/', $tok, $m)) {
-                $params['--'.$m[1]] = $m[2] ?? true;
+            AuditLog::record('deploy.migrate', null, ['command' => $command, 'ip' => $request->ip()]);
+
+            [$cmd, $args] = array_pad(explode(' ', $command, 2), 2, '');
+            $params = [];
+            foreach (preg_split('/\s+/', trim($args)) as $tok) {
+                if (preg_match('/^--([a-zA-Z-]+)(?:=(.*))?$/', $tok, $m)) {
+                    $params['--'.$m[1]] = $m[2] ?? true;
+                }
             }
+
+            $exit = Artisan::call($cmd, $params);
+
+            if ($exit === 0) {
+                $disk->put($flag, now()->toIso8601String());
+                $disk->delete('deploy.token');
+            }
+
+            return response()->json([
+                'ok' => $exit === 0,
+                'command' => $command,
+                'output' => trim(Artisan::output()),
+            ], $exit === 0 ? 200 : 500);
+        } finally {
+            optional($lock)->release();
         }
-
-        $exit = Artisan::call($cmd, $params);
-
-        if ($exit === 0) {
-            $disk->put($flag, now()->toIso8601String());
-        }
-
-        return response()->json([
-            'ok' => $exit === 0,
-            'command' => $command,
-            'output' => trim(Artisan::output()),
-        ], $exit === 0 ? 200 : 500);
     }
 }

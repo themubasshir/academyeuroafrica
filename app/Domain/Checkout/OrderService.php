@@ -66,21 +66,32 @@ class OrderService
      */
     public function beginPayment(Order $order, PaymentGateway $gateway): array
     {
-        abort_unless($order->status === 'pending', 422, 'Order is not payable.');
+        return DB::transaction(function () use ($order, $gateway): array {
+            $order = Order::lockForUpdate()->findOrFail($order->id);
+            abort_unless($order->status === 'pending', 422, 'Order is not payable.');
 
-        $checkout = $gateway->createCheckout($order);
+            $existing = PaymentTransaction::where('order_id', $order->id)
+                ->where('gateway', $gateway->name())
+                ->where('status', 'initiated')
+                ->latest('id')->first();
+            if ($existing && filled($existing->metadata['redirect_url'] ?? null)) {
+                return ['order' => $order, 'redirect_url' => $existing->metadata['redirect_url']];
+            }
 
-        PaymentTransaction::updateOrCreate(
-            ['gateway' => $gateway->name(), 'gateway_transaction_id' => $checkout['transaction_id']],
-            [
-                'order_id' => $order->id,
-                'status' => 'initiated',
-                'amount_cents' => $order->total_cents,
-                'currency' => $order->currency,
-            ]
-        );
+            $checkout = $gateway->createCheckout($order);
+            PaymentTransaction::updateOrCreate(
+                ['gateway' => $gateway->name(), 'gateway_transaction_id' => $checkout['transaction_id']],
+                [
+                    'order_id' => $order->id,
+                    'status' => 'initiated',
+                    'amount_cents' => $order->total_cents,
+                    'currency' => $order->currency,
+                    'metadata' => ['redirect_url' => $checkout['redirect_url']],
+                ]
+            );
 
-        return ['order' => $order, 'redirect_url' => $checkout['redirect_url']];
+            return ['order' => $order, 'redirect_url' => $checkout['redirect_url']];
+        });
     }
 
     /**
@@ -161,18 +172,22 @@ class OrderService
     }
 
     /**
-     * Refund a paid order via its gateway. Admin-authorised at the caller.
-     * Enforces amount bounds, prior refunds and records the refund row.
-     * Access revocation is a separate admin decision — never auto-revoked here.
+     * Refund a paid order and reconcile its purchased entitlements.
+     *
+     * Full refunds suspend every enrolment created by this order. Partial
+     * refunds are recorded without changing access because a partial monetary
+     * adjustment does not identify a course entitlement to remove.
      */
     public function refund(Order $order, User $admin, int $amountCents, ?string $reason = null): Refund
     {
+        abort_unless($admin->isAdmin(), 403);
         abort_unless($order->isPaid(), 422, 'Order is not paid.');
 
-        return DB::transaction(function () use ($order, $admin, $amountCents, $reason) {
+        return DB::transaction(function () use ($order, $admin, $amountCents, $reason): Refund {
             $txn = PaymentTransaction::where('order_id', $order->id)
                 ->where('status', 'paid')->lockForUpdate()->firstOrFail();
 
+            $order->loadMissing('items');
             $alreadyRefunded = Refund::where('payment_transaction_id', $txn->id)
                 ->where('status', 'completed')->sum('amount_cents');
 
@@ -181,21 +196,51 @@ class OrderService
 
             $captureId = $txn->metadata['capture_id'] ?? $txn->gateway_transaction_id;
             $idempotencyKey = 'refund:'.$txn->id.':'.$amountCents.':'.$alreadyRefunded;
+            $existingRefund = Refund::where('idempotency_key', $idempotencyKey)->first();
+            if ($existingRefund !== null) {
+                return $existingRefund;
+            }
 
             $gateway = app(PaymentManager::class)->driver($txn->gateway);
             $response = $gateway->refundCapture($captureId, $amountCents, $txn->currency, $idempotencyKey);
+            $providerStatus = strtoupper((string) ($response['status'] ?? ''));
+            abort_unless(in_array($providerStatus, ['COMPLETED', 'PENDING'], true), 502, 'Provider refund was not accepted.');
 
+            $completed = $providerStatus === 'COMPLETED';
             $refund = Refund::create([
                 'payment_transaction_id' => $txn->id,
                 'amount_cents' => $amountCents,
+                'provider_refund_id' => $response['id'] ?? null,
+                'idempotency_key' => $idempotencyKey,
+                'provider_status' => $providerStatus,
                 'reason' => $reason,
-                'status' => ($response['status'] ?? 'COMPLETED') === 'COMPLETED' ? 'completed' : 'pending',
+                'status' => $completed ? 'completed' : 'pending',
+                'completed_at' => $completed ? now() : null,
                 'processed_by' => $admin->id,
             ]);
 
+            if ($completed && $alreadyRefunded + $amountCents === $txn->amount_cents) {
+                $enrolments = Enrolment::where('order_id', $order->id)
+                    ->where('user_id', $order->user_id)
+                    ->where('status', 'active')
+                    ->lockForUpdate()->get();
+
+                foreach ($enrolments as $enrolment) {
+                    $enrolment->update(['status' => 'refunded', 'expires_at' => now()]);
+                }
+
+                AuditLog::record('order.refund.entitlements_suspended', $order, [
+                    'refund_id' => $refund->id,
+                    'enrolment_ids' => $enrolments->modelKeys(),
+                    'by' => $admin->id,
+                ]);
+            }
+
             AuditLog::record('order.refund', $order, [
-                'refund_id' => $response['id'] ?? null,
+                'refund_id' => $refund->id,
+                'provider_refund_id' => $refund->provider_refund_id,
                 'amount' => $amountCents,
+                'status' => $refund->status,
                 'by' => $admin->id,
             ]);
 

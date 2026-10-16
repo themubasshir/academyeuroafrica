@@ -14,14 +14,17 @@
 - Server-side totals from `course_variants`. Browser return/cancel never grants access — only a verified capture or verified webhook does.
 - `payment_events(gateway, gateway_event_id)` unique → idempotent fulfilment; `enrolments(user,variant)` unique → no duplicate access.
 - Webhook authenticity via PayPal `verify-webhook-signature` (never HMAC-with-secret). Capture integrity checked: status COMPLETED, amount, currency, order reference, capture id.
-- `PayPal-Request-Id` idempotency on order create/capture/refund. `PAYPAL_CLIENT_SECRET` server-side only, never in browser or bundle.
-- Sandbox credentials can never reach the live base URL (mode selects the host).
+- `PayPal-Request-Id` idempotency on order create/capture/refund. Refunds require an accepted provider status before persistence; completed full refunds suspend only enrolments linked to that order. Partial refunds preserve access by policy. `PAYPAL_CLIENT_SECRET` server-side only, never in browser or bundle.
+- Sandbox credentials can never reach the live base URL (mode selects the host). PayPal Live is selected only by explicit `PAYPAL_MODE=live`; invalid or incomplete configuration fails closed.
 
 ## Files
 - Uploads → private disk, randomised names, MIME+size validation. Served only via controller after auth check. Never placed under public web root; PHP execution impossible.
 
 ## Transport & headers
 - HTTPS only in prod (`SESSION_SECURE_COOKIE`, force HTTPS via host). Add CSP/X-Frame-Options/Referrer-Policy in Phase 8.
+
+## Deployment runner
+- The migration runner accepts only a fixed command allowlist, requires an IP allowlist, a one-time token, and a future `expires_at` value, and uses a distributed execution lock. Successful execution deletes the token and writes a command completion marker. Remove the route and token after deployment synchronisation; never expose the token or source archive through public storage.
 
 ## Audit
 - `audit_logs` records actor, action, subject, payload, IP for sensitive events (logins, provisioning, payments, refunds, enrolment changes).

@@ -2,7 +2,7 @@
 
 **Scope:** standalone Academy only. Joomla untouched. PayPal Live untouched. No production changes.
 
-**Audit basis:** code, routes, models, policies, services, migrations, views, tests, deployment docs, and prior test result from commit `45e9a0d`.
+**Audit basis:** code, routes, models, policies, services, migrations, views, tests, deployment docs, and direct verification of the working tree at commit `cf0b0d8` (latest completed audit commit). No Joomla files or production systems were modified.
 
 ## Executive result
 
@@ -178,13 +178,13 @@ Academy is **not launch-complete**. Main blockers:
 - Trainer access is scoped through `TrainerAssignment` policies.
 - Quiz results and correct answers have release controls.
 - Certificate references are non-sequential and verification is rate-limited.
-- Deploy runner uses IP allowlist, token comparison, command allowlist, throttling, audit logging, and per-command flag files.
+- Deploy runner uses IP allowlist, one-time consumed token, explicit expiry, fixed command allowlist, throttling, audit logging, execution locking, and per-command completion markers.
 
 ## P0/P1 security and integrity risks
 
-1. **Refund/access mismatch — P0.** `OrderService::refund()` records refund but explicitly leaves access revocation to a separate admin decision. Define policy and implement atomic entitlement suspension/revocation, with audit trail and student messaging.
-2. **Duplicate gateway transaction possibility — P0.** Payment events are idempotent, but `PaymentTransaction.gateway_transaction_id` requires review for uniqueness and concurrent capture protection.
-3. **Deploy runner exposure — P0 until retired.** Keep IP restriction and token rotation. Remove or disable route after synchronization. Never leave source archive or deploy token reachable through public storage.
+1. **Refund/access mismatch — addressed in Phase 15A.** Completed full refunds now atomically suspend only enrolments linked to the refunded order; partial refunds preserve access by documented policy. Provider status, idempotency data, and immutable audit records are stored. Student messaging remains a later notification feature.
+2. **Duplicate gateway transaction possibility — reduced in Phase 15A.** Payment initiation locks the pending order and reuses an existing initiated checkout transaction; event and enrolment uniqueness constraints remain active. MySQL race verification is still required.
+3. **Deploy runner exposure — controlled temporary risk until retired.** IP restriction, one-time token consumption, explicit expiry, fixed command allowlist, audit logging, and an execution lock are enforced. Remove or disable the route after synchronization and never expose source archives or deploy tokens publicly.
 4. **Production payment validation — P0.** Run PayPal sandbox capture, webhook signature, duplicate webhook, malformed payload, amount mismatch, currency mismatch, and delayed capture tests before launch.
 5. **Queue dependency — P0 for certificates/async work.** `MaybeIssueCertificate` implements `ShouldQueue`; cron worker must be configured and monitored, or certificate issuance must have a safe retry/reconciliation path.
 6. **Authentication lifecycle — P1.** No recovery or registration flow. Joomla SSO may cover public acquisition, but local staff/student recovery remains absent.
@@ -285,7 +285,7 @@ Prior completed run at commit `45e9a0d`: **144 tests, 275 assertions, passing**.
 - render smoke
 - deploy runner
 
-Current checkout environment has Composer production dependencies but no `vendor/bin/phpunit`; the full suite cannot be rerun until development dependencies are installed. This is an audit limitation, not a claim of current failure.
+Phase 15A verification on 2026-10-16: `composer install --prefer-dist --no-interaction` restored the lockfile-pinned local development dependencies without changing Composer requirements. `php artisan test --compact` passed: **149 tests, 289 assertions, 0 failures** on local SQLite/PHP 8.3. The suite now includes PayPal mode/configuration and refund-entitlement regression coverage plus deployment-runner expiry/replay coverage. MySQL remains an external staging verification requirement.
 
 Missing high-value tests:
 
@@ -333,7 +333,19 @@ Missing high-value tests:
 - Advanced analytics/export.
 - Full browser automation and visual regression suite.
 
-# 8. External dependencies
+# 8. Direct verification notes (2026-10-16)
+
+- Working tree: commit `cf0b0d8`; clean before this documentation update.
+- `php artisan route:list --except-vendor`: 21 routes registered. The expected authenticated student, trainer, and admin Livewire routes are present; checkout, webhook, certificate, file, bridge, and migration routes are also present.
+- `bootstrap/app.php` registers `SecurityHeaders` on the web middleware stack and aliases `active`/`role`; this previously unverified security control is confirmed in code.
+- `composer show --direct`: Laravel 13.36.0, Livewire 4.4.7, Dompdf 3.1.2, Endroid QR Code 6.0.9. The installed vendor tree omits development packages despite `composer.json` declaring PHPUnit 12.5 and Pint 1.27 under `require-dev`.
+- `php artisan migrate:status`: all migrations, including the commercial catalogue migrations, are applied to the local SQLite database. This does not validate MySQL compatibility or production execution.
+- Phase 15A corrected PayPal live detection to require explicit `PAYPAL_MODE=live`; sandbox and invalid modes fail closed, incomplete credentials are rejected before HTTP, and the admin Integrations view reports the configured environment.
+- Payment initiation now locks the pending order and reuses an existing initiated checkout transaction, reducing duplicate provider orders. Webhook/event and enrolment uniqueness constraints remain in force; MySQL concurrency verification is still required.
+- Refund processing now requires provider `COMPLETED`/`PENDING` status, stores provider and idempotency data, records audit events, suspends only order-linked enrolments on a completed full refund, and preserves access for partial refunds by documented policy. Admin Orders exposes the authorised refund action. Duplicate refund attempts reuse the idempotency record.
+- There are no `app/Notifications`, `app/Events`, or `app/Listeners` directories, and no student order/history/profile/recovery routes. These are confirmed missing rather than merely unverified.
+
+# 9. External dependencies
 
 - InterServer cPanel/File Manager and fixed docroot behavior.
 - MySQL production database.

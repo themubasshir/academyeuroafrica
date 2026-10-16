@@ -36,11 +36,19 @@ class DeployRunnerTest extends TestCase
         $this->hit(['token' => 'wrong'])->assertNotFound();
     }
 
+    public function test_denies_missing_or_expired_expiry(): void
+    {
+        Storage::disk('local')->put('deploy.token', 'right-token');
+
+        $this->hit(['token' => 'right-token'])->assertNotFound();
+        $this->hit(['token' => 'right-token', 'expires_at' => now()->subMinute()->toIso8601String()])->assertNotFound();
+    }
+
     public function test_denies_disallowed_command(): void
     {
         Storage::disk('local')->put('deploy.token', 'right-token');
 
-        $this->hit(['token' => 'right-token', 'run' => 'tinker'])->assertStatus(422);
+        $this->hit(['token' => 'right-token', 'expires_at' => now()->addMinute()->toIso8601String(), 'run' => 'tinker'])->assertStatus(422);
     }
 
     public function test_denies_after_done_flag(): void
@@ -49,16 +57,24 @@ class DeployRunnerTest extends TestCase
         // Per-command flag: default command is "migrate --force".
         Storage::disk('local')->put('deploy.done.'.md5('migrate --force'), 'done');
 
-        $this->hit(['token' => 'right-token'])->assertNotFound();
+        $this->hit(['token' => 'right-token', 'expires_at' => now()->addMinute()->toIso8601String()])->assertNotFound();
     }
 
     public function test_allows_catalogue_commands_in_allowlist(): void
     {
         Storage::disk('local')->put('deploy.token', 'right-token');
 
-        // catalogue:variants is in the allowlist — passes the command gate.
-        // Assert it does NOT fail with the 422 "Command not allowed" response.
-        $resp = $this->hit(['token' => 'right-token', 'run' => 'catalogue:variants']);
+        $resp = $this->hit(['token' => 'right-token', 'expires_at' => now()->addMinute()->toIso8601String(), 'run' => 'catalogue:variants']);
         $this->assertNotEquals(422, $resp->status());
+    }
+
+    public function test_successful_command_consumes_token_and_cannot_be_replayed(): void
+    {
+        Storage::disk('local')->put('deploy.token', 'right-token');
+
+        $params = ['token' => 'right-token', 'expires_at' => now()->addMinute()->toIso8601String(), 'run' => 'catalogue:variants'];
+        $this->hit($params)->assertSuccessful();
+        $this->assertFalse(Storage::disk('local')->exists('deploy.token'));
+        $this->hit($params)->assertNotFound();
     }
 }
