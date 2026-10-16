@@ -1,0 +1,30 @@
+[
+  {
+    "width": 768,
+    "status": 1,
+    "labels": [
+      "Email",
+      "Password",
+      "Remember me"
+    ],
+    "focus": {
+      "tag": "INPUT",
+      "id": "email"
+    },
+    "viewportOverflow": false
+  },
+  {
+    "width": 390,
+    "status": 1,
+    "labels": [
+      "Email",
+      "Password",
+      "Remember me"
+    ],
+    "focus": {
+      "tag": "INPUT",
+      "id": "email"
+    },
+    "viewportOverflow": false
+  }
+]

@@ -1,0 +1,182 @@
+[
+  {
+    "name": "01-admin-dashboard",
+    "path": "/admin/dashboard",
+    "status": 200,
+    "expected": "Dashboard",
+    "ok": true
+  },
+  {
+    "name": "02-admin-programmes",
+    "path": "/admin/programmes",
+    "status": 200,
+    "expected": "New programme",
+    "ok": true
+  },
+  {
+    "name": "03-admin-courses",
+    "path": "/admin/courses",
+    "status": 200,
+    "expected": "New course",
+    "ok": true
+  },
+  {
+    "name": "04-admin-packages",
+    "path": "/admin/packages",
+    "status": 200,
+    "expected": "Course Packages",
+    "ok": true
+  },
+  {
+    "name": "05-admin-users",
+    "path": "/admin/users",
+    "status": 200,
+    "expected": "Users",
+    "ok": true
+  },
+  {
+    "name": "06-admin-orders",
+    "path": "/admin/orders",
+    "status": 200,
+    "expected": "Orders",
+    "ok": true
+  },
+  {
+    "name": "07-admin-enrolments",
+    "path": "/admin/enrolments",
+    "status": 200,
+    "expected": "Enrolments",
+    "ok": true
+  },
+  {
+    "name": "08-admin-materials",
+    "path": "/admin/materials",
+    "status": 200,
+    "expected": "Materials",
+    "ok": true
+  },
+  {
+    "name": "09-admin-reports",
+    "path": "/admin/reports",
+    "status": 200,
+    "expected": "Operational reports",
+    "ok": true
+  },
+  {
+    "name": "admin-logout",
+    "ok": true
+  },
+  {
+    "name": "10-student-dashboard",
+    "path": "/dashboard",
+    "status": 200,
+    "expected": "Welcome back",
+    "ok": true
+  },
+  {
+    "name": "11-student-profile",
+    "path": "/my/profile",
+    "status": 200,
+    "expected": "Profile",
+    "ok": true
+  },
+  {
+    "name": "12-student-orders",
+    "path": "/my/orders",
+    "status": 200,
+    "expected": "Order history",
+    "ok": true
+  },
+  {
+    "name": "13-student-notifications",
+    "path": "/my/notifications",
+    "status": 200,
+    "expected": "Notifications",
+    "ok": true
+  },
+  {
+    "name": "14-student-results",
+    "path": "/my/results",
+    "status": 200,
+    "expected": "Results",
+    "ok": true
+  },
+  {
+    "name": "15-student-training",
+    "path": "/my/training",
+    "status": 200,
+    "expected": "Private Training",
+    "ok": true
+  },
+  {
+    "name": "16-student-certificates",
+    "path": "/my/certificates",
+    "status": 200,
+    "expected": "Certificates",
+    "ok": true
+  },
+  {
+    "name": "17-student-course",
+    "path": "/learn/2",
+    "status": 200,
+    "expected": "Welcome & course tour",
+    "ok": false
+  },
+  {
+    "name": "student-logout",
+    "ok": true
+  },
+  {
+    "name": "19-trainer-dashboard",
+    "path": "/trainer/dashboard",
+    "status": 200,
+    "expected": "Trainer dashboard",
+    "ok": true
+  },
+  {
+    "name": "20-trainer-availability",
+    "path": "/trainer/availability",
+    "status": 200,
+    "expected": "Availability",
+    "ok": true
+  },
+  {
+    "name": "21-trainer-course-manage",
+    "path": "/trainer/courses/1/manage",
+    "status": 200,
+    "expected": "Radio Presentation Fundamentals",
+    "ok": true
+  },
+  {
+    "name": "22-trainer-sessions",
+    "path": "/trainer/courses/1/sessions",
+    "status": 200,
+    "expected": "Sessions",
+    "ok": true
+  },
+  {
+    "name": "23-trainer-assignments",
+    "path": "/trainer/courses/1/assignments",
+    "status": 200,
+    "expected": "Assignments",
+    "ok": true
+  },
+  {
+    "name": "24-trainer-quizzes",
+    "path": "/trainer/courses/1/quizzes",
+    "status": 200,
+    "expected": "Quizzes",
+    "ok": true
+  },
+  {
+    "name": "25-trainer-students",
+    "path": "/trainer/courses/1/students",
+    "status": 200,
+    "expected": "Students",
+    "ok": true
+  },
+  {
+    "name": "trainer-logout",
+    "ok": true
+  }
+]
