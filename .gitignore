@@ -32,3 +32,6 @@ storage/qa/
 .agents/skills/*/scripts/bin/
 .gemini/skills/*/scripts/bin/
 /dist/
+/public/vendor
+/acceptance-screenshots-15e1/
+/acceptance-screenshots/

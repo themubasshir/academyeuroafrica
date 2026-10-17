@@ -68,6 +68,6 @@
         </main>
     @endauth
 
-    @livewireScriptConfig
+    @livewireScripts
 </body>
 </html>

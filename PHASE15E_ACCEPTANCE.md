@@ -1,138 +1,128 @@
 # PHASE 15E — Browser Acceptance
 
-Date: 2026-10-17
-Commit tested: `fe1c734`
-Environment: local Laravel app at `http://127.0.0.1:8000`, SQLite, local/demo data only.
+Date: 2026-10-17 (rerun after P0 fix)
+Commit tested: working tree incl. Livewire/CSP fix
+Environment: local Laravel app at `http://127.0.0.1:8000`, SQLite, deterministic local-only fixture (`academy:acceptance-fixture`).
 
 ## Scope and safety
 
 - Joomla not modified.
 - Production not touched.
 - PayPal Live not enabled.
-- Demo seeder ran only in local environment.
-- No real customer data used.
-- Development accounts were used from `DemoSeeder`; credentials are not repeated here.
-- Browser automation used Playwright Chromium installed outside project dependencies. No Playwright package or config added to project.
+- Fixture is local/testing-only (`app()->environment(['local','testing'])` guard); no production seeders touched.
+- No real customer data used; fixture accounts use `@eamn.test` addresses, credentials not repeated here.
+- Browser automation used Playwright Chromium installed outside project dependencies. No Playwright package/config added to project.
 
-## Preparation
+## P0 defects found and fixed this run
 
-| Check | Status | Evidence |
-|---|---|---|
-| Laravel development server | PASS | `php artisan serve --host=127.0.0.1 --port=8000`; `/login` returned HTTP 200 |
-| Database migrations | PASS | `php artisan migrate:status --no-interaction`; all listed migrations `[1] Ran` |
-| Local demo accounts | PASS | `php artisan db:seed --class=DemoSeeder --no-interaction`; active verified admin, student, trainer confirmed without exposing credentials |
-| Frontend assets | PASS | `npm run build` completed; Vite manifest/assets generated |
-| Browser automation | PASS | Playwright Chromium drove local browser flows |
+Two related defects made **every** Livewire interaction dead in a real browser while still rendering HTTP-200 pages. All earlier "rendered" passes were misleading: buttons clicked but committed nothing.
 
-## Browser-tested workflows
+| # | Defect | Evidence | Fix |
+|---|--------|----------|-----|
+| 1 | Livewire runtime never loaded. Layout emitted only `@livewireScriptConfig` (config blob), never the `livewire.js` script tag. `window.Livewire === undefined`. | `document.querySelector` showed no livewire script src; `typeof window.Livewire === "undefined"`; zero POSTs to `livewire-*/update` on any `wire:click`. | `app.blade.php:71` changed `@livewireScriptConfig` → `@livewireScripts` (emits script tag + config). |
+| 2 | After script loaded, every `wire:click`/`x-on` action threw `EvalError`: CSP `script-src 'self' 'unsafe-inline'` lacks `unsafe-eval`, blocking Alpine's `new Function` evaluator. | Browser `PAGE-ERR: Evaluating a string as JavaScript violates CSP ... 'unsafe-eval' is not allowed` on every click; no `livewire-*/update` request fired. | `config/livewire.php` `csp_safe => env('LIVEWIRE_CSP_SAFE', true)` → serves `livewire.csp.min.js` (evaluator-based, no `new Function`). Keeps strict CSP. |
 
-Screenshots are stored in `acceptance-screenshots/`.
+Verification of fix: `window.Livewire` defined; `wire:click="markComplete"` → POST `livewire-*/update` 200 → `lesson_progress` row persisted. Mobile nav drawer (`x-data`/`@click`/`x-show` expressions) works under CSP build.
 
-### Administrator
+Supporting deploy change: `composer.json` `post-update-cmd` now runs `livewire:publish --assets` so the CSP asset exists on deploy; `/public/vendor` gitignored; `acceptance-screenshots*` gitignored.
 
-| Workflow | Status | Notes |
-|---|---|---|
-| Login | PASS | Browser form submission reached `/admin/dashboard` |
-| Dashboard | PASS | HTTP 200 and dashboard content rendered |
-| Programme management UI | PASS | Create form and seeded programme list rendered; edit/archive controls present |
-| Course management UI | PASS | Create form and seeded course list rendered; curriculum/edit controls present |
-| Trainer assignment UI | PASS | Course form exposed primary trainer selection; seeded trainer visible |
-| Material visibility UI | PASS | Material library rendered enrolled/group/student-targeted records |
-| User management UI | PASS | User page rendered |
-| Enrolment management UI | PASS | Enrolment page rendered |
-| Commercial variants | PASS | Package page rendered pending/published controls and approve actions |
-| Orders/refunds UI | PASS | Orders page rendered |
-| Reports | PASS | Operational reports and metrics rendered |
-| Logout | PASS | Browser logout returned to `/login` |
-| Actual create/edit/upload/approve mutation flows | NOT CLAIMED | Not executed in this run; no mutation was made to seeded demo records |
+New fixture: `php artisan academy:acceptance-fixture` — idempotent (updateOrCreate/firstOrCreate keyed by slug/email), guards non-local env, resets mutable attempt/progress state for repeatability, emits JSON metadata (IDs/routes) without password. Covered by `tests/Feature/AcceptanceFixtureCommandTest.php` (idempotency + non-local refusal).
+
+## Browser-tested workflows (Playwright Chromium, 33 checks)
+
+Results JSON: `acceptance-screenshots-15e1/results.json`. Screenshots in same dir (gitignored). **33 PASS / 0 FAIL.**
 
 ### Student
-
-| Workflow | Status | Notes |
+| Workflow | Status | Evidence |
 |---|---|---|
-| Login | PASS | Browser form submission reached `/dashboard` |
-| Logout | PASS | Browser logout returned to `/login` |
-| Dashboard | PASS | Welcome, enrolled courses, live classes, assignment due item rendered |
-| Profile | PASS | Profile page rendered |
-| Orders | PASS | Order history page rendered |
-| Notifications | PASS | Notifications page rendered |
-| Results | PASS | Results page rendered |
-| Private training | PASS | Training page rendered |
-| Certificates | PASS | Certificates page rendered |
-| Course access | BLOCKED | Seeded enrolment IDs did not match hard-coded probe path `/learn/2`; route itself returned HTTP 200 but expected course title was not present. The student dashboard showed both enrolled courses and browser links must be followed in a corrected run. |
-| Lesson progression | NOT CLAIMED | No successful lesson interaction recorded |
-| Private material downloads | NOT CLAIMED | No successful download recorded |
-| Assignment submission | NOT CLAIMED | No seeded assignment browser submission completed |
-| Quiz attempts/results | NOT CLAIMED | No seeded quiz browser attempt completed |
-| Email verification | BLOCKED | Demo users are already verified; no real mail transport available (`MAIL_MAILER=log`) |
-| Password recovery/change | NOT CLAIMED | No browser mutation completed |
-| Certificates download | NOT CLAIMED | No issued certificate in seeded state |
+| Login → `/dashboard` | PASS | reached dashboard |
+| Dashboard shows fixture course | PASS | `01-student-dashboard.png` |
+| Course open via dashboard-rendered link | PASS | `02-student-course.png` (real `/learn/{enrolment}` href, not hardcoded ID) |
+| Lesson open via Lessons tab | PASS | navigated to lesson route |
+| Mark complete persists | PASS | `lesson_progress` row created; checkmark rendered on lessons tab (`03-student-lesson-complete.png`) |
+| Progress counter increments | PASS | overview shows 1/2 completed |
+| Materials tab renders student material | PASS | `04-student-materials.png` |
+| Authorised material download | PASS | `files/materials/{id}` → 200 + expected content |
+| Trainer-only material denied | PASS | `files/materials/{trainer_id}` → 403 |
+| Assignment open + submit | PASS | `assignment_submissions` row persisted with body (`05-student-assignment-submitted.png`) |
+| Quiz start + answer + submit | PASS | `Submitted` state + attempt persisted (`06-student-quiz-submitted.png`) |
+| Results page shows quiz score | PASS | `07-student-results.png` |
+| Logout | PASS | returned to `/login` |
 
 ### Trainer
-
-| Workflow | Status | Notes |
+| Workflow | Status | Evidence |
 |---|---|---|
-| Login | PASS | Browser form submission reached `/trainer/dashboard` |
-| Dashboard | PASS | Trainer dashboard rendered |
-| Assigned courses | PASS | Assigned course management page rendered |
-| Lesson management | PASS | Course management page rendered |
-| Live-session scheduling UI | PASS | Sessions page returned HTTP 200 and rendered session UI |
-| Attendance | NOT CLAIMED | No attendance mutation completed |
-| Assignment grading UI | NOT CLAIMED | No seeded submission grading completed |
-| Quiz administration UI | PASS | Quiz administration page rendered |
-| Student performance UI | PASS | Students page rendered |
-| Tutoring availability | PASS | Availability page rendered |
-| Booking/cancellation | NOT CLAIMED | No browser booking/cancellation mutation completed |
-| Unassigned course access | NOT CLAIMED | Authorization negative test not completed |
-| Other students’ private records | NOT CLAIMED | Authorization negative test not completed |
-| Logout | PASS | Browser logout returned to `/login` |
+| Login → `/trainer/dashboard` | PASS | `08-trainer-dashboard.png` |
+| Assigned course manage access | PASS | `09-trainer-manage.png` |
+| Module creation via form | PASS | "Browser Added Module" persisted |
+| Attendance record + save | PASS | `10-trainer-attendance.png`, saved flash |
+| Assignment grading + release | PASS | `11-trainer-grading.png`, grade released |
+| Quiz attempts page | PASS | `12-trainer-quiz-attempts.png` |
+| Student progress list | PASS | "Acceptance Student" listed |
+| Unassigned course access | PASS | `trainer/courses/{unassigned}/manage` → 403 |
+| Logout | PASS | returned to `/login` |
 
-## Responsive and accessibility
-
-| Viewport | Status | Findings |
+### Admin
+| Workflow | Status | Evidence |
 |---|---|---|
-| Desktop 1440 px | PASS | Screenshots captured for admin, student, trainer pages |
-| Tablet 768 px | PASS | Login page rendered without horizontal overflow; labels present; initial focus landed on Email. Screenshot: `acceptance-screenshots/responsive-login-768.png` |
-| Mobile 390 px | PASS | Login page rendered without horizontal overflow; labels present; initial focus landed on Email. Screenshot: `acceptance-screenshots/responsive-login-390.png` |
-| Keyboard navigation | PASS (basic login check) | Login page initial focus landed on Email; full keyboard-only role-page run not completed |
-| Labels/error feedback/focus | PASS (basic login check) | Email, Password, Remember me labels present and focus visible state was inspectable; full role-page accessibility audit not recorded |
+| Login → `/admin/dashboard` | PASS | reached dashboard |
+| Programme create + edit | PASS | "Browser Mutation Programme Edited" persisted |
+| Course create + trainer assign | PASS | "Browser Mutation Course" persisted |
+| Variant (package) edit | PASS | "Acceptance Standard Edited" persisted (`13-admin-packages.png`) |
+| Logout | PASS | returned to `/login` |
 
-## Payment acceptance
-
-| Test | Status | Reason |
+### Security negatives
+| Check | Status | Evidence |
 |---|---|---|
-| PayPal Sandbox checkout | BLOCKED | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, and `PAYPAL_WEBHOOK_ID` are unset locally |
-| Successful capture | BLOCKED | Sandbox credentials unavailable |
-| Duplicate callback | BLOCKED | Reachable external callback and sandbox event unavailable |
-| Enrolment creation from payment | BLOCKED | Sandbox checkout unavailable |
-| Refund | BLOCKED | Sandbox payment unavailable |
-| Entitlement suspension | BLOCKED | Sandbox payment unavailable |
-| Failed payment | BLOCKED | Sandbox payment unavailable |
-| Local test checkout | NOT CLAIMED | Not substituted for requested PayPal Sandbox acceptance |
+| Unauthenticated `/admin/dashboard` | PASS | 302 → `/login` |
+| CSRF missing token POST `/login` | PASS | 419 |
+| Student → trainer-only material | PASS | 403 |
+| Trainer → unassigned course | PASS | 403 |
+
+### Responsive (mobile drawer verified functional under CSP build)
+| Viewport | Page | Overflow | Narrow text fields | Status |
+|---|---|---|---|---|
+| 768px | dashboard / course / profile | none | none | PASS |
+| 390px | dashboard / course / profile | none | none | PASS |
+| 390px | nav drawer open/close | — | — | PASS (`aria-expanded` toggles, no page errors) |
+
+Note: responsive check excludes checkbox/radio/file inputs from the 150px text-field-width rule (they're legitimately small); all text inputs/selects/textareas were wide enough, no horizontal overflow.
+
+## Not exercised / still blocked
+
+| Item | Status | Reason |
+|---|---|---|
+| PayPal Sandbox checkout/capture/refund/webhook | BLOCKED | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID` unset locally; no reachable sandbox callback |
+| Email verification real-mail flow | BLOCKED | `MAIL_MAILER=log`; fixture users pre-verified |
+| Password recovery/change browser mutation | NOT CLAIMED | not exercised this run |
+| Certificate issuance/download | NOT CLAIMED | no issued certificate in fixture |
+| Booking/cancellation | NOT CLAIMED | not exercised |
+| Local test checkout | NOT CLAIMED | not substituted for PayPal acceptance |
+| Full keyboard-only + screen-reader audit | PARTIAL | labels/focus/overflow verified; no dedicated AT run |
 
 ## Findings and defects
 
-1. **Probe defect, not application defect:** initial automation used `/learn/2` as a fixed path and expected Radio Presentation Fundamentals. Seeded enrolment IDs are not stable across existing local database state. Correct automation must obtain the actual `href` from the student dashboard. No code fix applied.
-2. No reproducible P0/P1 application defect was established from completed browser checks.
-3. No verified defect warranted a code change. No regression test added.
+1. **P0 (fixed):** Livewire interactivity dead app-wide — missing script tag + CSP eval block. See table above.
+2. No remaining reproducible P0/P1 defect after fix.
+3. Probe-only issues corrected in harness (Livewire round-trip wait, dynamic route discovery, CSP-aware field-width rule, fixture state reset) — these were test-harness defects, not app defects.
 
 ## Final verification
 
 ```text
 php -d memory_limit=512M ./vendor/bin/phpunit
-# OK (168 tests, 338 assertions)
+# OK (170 tests, 352 assertions)
 vendor/bin/pint --dirty --format agent
 # passed
 git diff --check
 # passed
+php artisan academy:acceptance-fixture --no-interaction
+# idempotent; JSON metadata emitted; non-local env refused
 ```
 
 ## Readiness recommendation
 
 ### Client demonstration
-
-**CONDITIONAL.** Core authenticated dashboards and role landing pages rendered successfully in real Chromium interactions at desktop size. Demo must avoid claiming untested mutation flows, responsive/accessibility completion, payment completion, or certificate/lesson/quiz/assignment success. Run corrected course-link flow before demonstration.
+**READY (local).** Student, trainer, and admin core learning workflows verified end-to-end in real Chromium against a deterministic local fixture: enrolment workspace, lesson completion, material download with authorization, assignment submit→grade→release, quiz attempt→result, attendance, admin mutations, role-based 403s, and mobile drawer/responsive at 390/768px. Do not demo payment flows or claim certification/AT accessibility coverage.
 
 ### Production deployment
-
-**NOT READY / BLOCKED.** Required browser coverage is incomplete; tablet/mobile and dedicated accessibility checks are untested; payment Sandbox credentials/callback are unavailable; several requested student/trainer mutation and authorization-negative workflows are untested. Do not deploy based on this acceptance run.
+**CONDITIONAL.** Application-level P0 fixed and browser-verified. Remaining gates: PayPal Sandbox credentials + reachable callback for payment acceptance; real-mail verification path; accessibility/AT audit; certificate/booking flows. Deploy `livewire:publish --assets` step is wired via `post-update-cmd`.
