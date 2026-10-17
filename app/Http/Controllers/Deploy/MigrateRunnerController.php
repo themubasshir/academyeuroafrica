@@ -45,6 +45,7 @@ class MigrateRunnerController extends Controller
         'academy:backup-db',
         'academy:catalogue-status',
         'academy:mail-status',
+        'config:clear',
     ];
 
     /**
@@ -59,6 +60,7 @@ class MigrateRunnerController extends Controller
         'academy:catalogue-status',
         'academy:mail-status',
         'academy:backup-db',
+        'academy:queue-mail-test',
     ];
 
     private const ALLOWED_PARAMS = [
@@ -75,6 +77,7 @@ class MigrateRunnerController extends Controller
         'academy:backup-db' => [],
         'academy:catalogue-status' => [],
         'academy:mail-status' => [],
+        'config:clear' => [],
     ];
 
     public function __invoke(Request $request): JsonResponse
