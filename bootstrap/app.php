@@ -24,8 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Run inline in the cron tick (no runInBackground): it relies on
         // proc_open'd children that some shared hosts kill when the cron
         // process exits. Inline is bounded by --max-time=50 and the
-        // withoutOverlapping lock already prevents a second tick colliding.
-        $schedule->command('queue:work', ['--stop-when-empty' => true, '--max-time' => 50])
+        // Laravel serializes boolean option arrays as --flag='1'; use the exact
+        // CLI string because queue:work accepts --stop-when-empty as a flag.
+        $schedule->command('queue:work --stop-when-empty --max-time=50')
             ->everyMinute()
             ->withoutOverlapping(30);
     })
