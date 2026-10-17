@@ -39,8 +39,8 @@ class MigrateRunnerController extends Controller
         'catalogue:variants',
         'academy:provision-admin',
         'list --raw',
-        'db:select --query=select count(*) as jobs from jobs',
-        'db:select --query=select count(*) as failed_jobs from failed_jobs',
+        'academy:deploy-status',
+        'academy:queue-mail-test',
     ];
 
     /**
@@ -56,8 +56,8 @@ class MigrateRunnerController extends Controller
         'catalogue:variants' => [],
         'academy:provision-admin' => [],
         'list --raw' => ['--raw'],
-        'db:select --query=select count(*) as jobs from jobs' => ['--query'],
-        'db:select --query=select count(*) as failed_jobs from failed_jobs' => ['--query'],
+        'academy:deploy-status' => [],
+        'academy:queue-mail-test' => [],
     ];
 
     public function __invoke(Request $request): JsonResponse

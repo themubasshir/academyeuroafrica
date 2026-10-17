@@ -94,14 +94,14 @@ class DeployRunnerTest extends TestCase
         $this->assertNotEquals(422, $resp->status());
     }
 
-    public function test_allows_command_list_and_fixed_queue_counts(): void
+    public function test_allows_command_list_and_fixed_diagnostics(): void
     {
         Storage::disk('local')->put('deploy.token', 'right-token');
 
         foreach ([
             'list --raw',
-            'db:select --query=select count(*) as jobs from jobs',
-            'db:select --query=select count(*) as failed_jobs from failed_jobs',
+            'academy:deploy-status',
+            'academy:queue-mail-test',
         ] as $command) {
             $this->assertNotEquals(422, $this->hit(['token' => 'right-token', 'expires_at' => now()->addMinute()->toIso8601String(), 'run' => $command])->status());
         }
