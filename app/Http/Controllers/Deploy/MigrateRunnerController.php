@@ -38,6 +38,9 @@ class MigrateRunnerController extends Controller
         'catalogue:import --dry-run',
         'catalogue:variants',
         'academy:provision-admin',
+        'list --raw',
+        'db:select --query=select count(*) as jobs from jobs',
+        'db:select --query=select count(*) as failed_jobs from failed_jobs',
     ];
 
     /**
@@ -52,6 +55,9 @@ class MigrateRunnerController extends Controller
         'catalogue:import --dry-run' => ['--dry-run'],
         'catalogue:variants' => [],
         'academy:provision-admin' => [],
+        'list --raw' => ['--raw'],
+        'db:select --query=select count(*) as jobs from jobs' => ['--query'],
+        'db:select --query=select count(*) as failed_jobs from failed_jobs' => ['--query'],
     ];
 
     public function __invoke(Request $request): JsonResponse
