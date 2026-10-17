@@ -33,20 +33,10 @@ class MigrateRunnerController extends Controller
      */
     private const ALLOWED = [
         'migrate --force',
-        // Drops ALL tables then re-migrates — only safe on a brand-new deploy
-        // where a partially-failed migration left orphan tables with no
-        // migrations row. Destructive; gated by the same token+IP one-shot.
-        'migrate:fresh --force',
         'db:seed --class=RoleSeeder --force',
         'catalogue:import',
         'catalogue:variants',
-        // One-time admin provisioning — admin email is read from
-        // storage/app/deploy.admin (host-controlled), never from the request,
-        // so this cannot be turned into arbitrary-user creation over HTTP.
         'academy:provision-admin',
-        // Drains queued notifications on hosts without a long-running worker.
-        'queue:work --stop-when-empty --max-time=60',
-        'queue:retry all',
     ];
 
     /**
@@ -56,13 +46,10 @@ class MigrateRunnerController extends Controller
      */
     private const ALLOWED_PARAMS = [
         'migrate --force' => ['--force'],
-        'migrate:fresh --force' => ['--force'],
         'db:seed --class=RoleSeeder --force' => ['--class', '--force'],
         'catalogue:import' => [],
         'catalogue:variants' => [],
         'academy:provision-admin' => [],
-        'queue:work --stop-when-empty --max-time=60' => ['--stop-when-empty', '--max-time'],
-        'queue:retry all' => [],
     ];
 
     public function __invoke(Request $request): JsonResponse

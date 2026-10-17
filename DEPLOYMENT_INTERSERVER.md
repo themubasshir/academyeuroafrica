@@ -1,9 +1,9 @@
-# Deployment — InterServer shared hosting (no SSH)
+# Deployment — InterServer shared hosting
 
 ## Constraints honoured
-- No SSH/terminal on prod. No Docker/Redis/Supervisor/Node/WebSockets.
+- No terminal/SSH **shell** on prod (FTP/SFTP file access only). No Docker/Redis/Supervisor/Node/WebSockets.
 - Composer + Vite run locally; only built artefacts uploaded.
-- Subdomain docroot is **fixed** — cannot be repointed. Split layout used.
+- **Confirmed (Phase 13B):** the `academy.euroafricamedia.eu` document root is fixed at `/home/euroafri/academy.euroafricamedia.eu` and is **not repointed**. An earlier note in this doc saying the docroot "MUST point to `eamn-academy/public`" was superseded — the split layout is the authoritative deployment. Do not attempt to repoint the docroot.
 
 ## Split layout (required)
 
@@ -236,23 +236,38 @@ public registration (or a second provisioned account).
 `storage/` and `bootstrap/cache/` under the private dir must be writable by the PHP user (`euroafri`). cPanel's `MultiPHP`/`php.ini` user owns them; `chmod 755` is sufficient under suPHP/LSAPI.
 
 ## Cron (cPanel → Cron Jobs)
-**Exactly one** cron line. The scheduler already drains the queue
-(`bootstrap/app.php` → `withSchedule`), holding a `withoutOverlapping` mutex.
-Adding a second standalone `queue:work` line would run two workers and can
-process the same job twice — do not add it.
-```
-* * * * * /usr/local/bin/php /home/euroafri/eamn-academy/artisan schedule:run >> /home/euroafri/eamn-academy/storage/logs/cron.log 2>&1
-```
-Use the cPanel PHP binary path (`php -v` in MultiPHP, usually
-`/usr/local/bin/php` or `ea-php83`). The scheduled job runs
-`queue:work --stop-when-empty --max-time=50` in the background, so a slow SMTP
-send cannot pile up ticks; the mutex (30 min expiry) prevents overlap and the
-`--max-time` bound guarantees the worker exits.
+Exactly one cron line. Scheduler drains the bounded database queue worker defined in
+`bootstrap/app.php`; do not add a second standalone `queue:work` cron.
 
-Verify after setup:
-- `storage/logs/cron.log` shows a `schedule:run` entry each minute.
-- `php artisan schedule:list` lists one queue:work entry.
-- `select count(*) from failed_jobs` stays 0; `jobs` drains to 0.
+```
+* * * * * /opt/alt/php83/usr/bin/php /home/euroafri/eamn-academy/artisan schedule:run >> /home/euroafri/eamn-academy/storage/logs/cron.log 2>&1
+```
+
+Confirm the CLI path in cPanel first with:
+
+```
+/opt/alt/php83/usr/bin/php -v
+```
+
+The scheduled worker uses `queue:work --stop-when-empty --max-time=50` inline and
+`withoutOverlapping(30)`: no background child survives past cron, and ticks cannot
+run concurrent workers. Verify after setup:
+
+- `storage/logs/cron.log` shows a scheduler run each minute.
+- `jobs` drains to zero after a controlled notification.
+- `failed_jobs` remains zero; retry failures from cPanel CLI, never HTTP.
+
+## Joomla bridge secret rotation
+
+1. Generate a new 32-byte value locally; never put either secret in Git, tickets,
+   HTTP runner input, or logs.
+2. Set the new value in Academy `JOOMLA_BRIDGE_SECRET` and Joomla component
+   `bridge_secret` during one maintenance window. Keep bridge disabled until both
+   sides match; this bridge has no dual-secret grace period.
+3. Clear Academy config cache only through approved cPanel maintenance access,
+   then test one controlled student SSO round trip.
+4. If verification fails, restore both previous values together. Record only the
+   rotation time and operator in the change log, not secret material.
 
 ## Migration runner (no SSH)
 `POST deploy/migrate` is a temporary, fixed-allowlist endpoint. Guard stack

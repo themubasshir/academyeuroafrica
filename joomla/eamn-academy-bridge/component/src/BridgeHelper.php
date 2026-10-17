@@ -156,29 +156,35 @@ class BridgeHelper
 
         $db = Factory::getDbo();
         $hash = hash('sha256', $code);
+        $db->transactionStart();
 
-        $row = $db->setQuery(
-            $db->getQuery(true)
-                ->select(['id', 'user_id', 'expires_at'])
-                ->from('#__eamnbridge_codes')
-                ->where($db->quoteName('code_hash').' = '.$db->quote($hash))
-        )->loadObject();
+        try {
+            $row = $db->setQuery(
+                $db->getQuery(true)
+                    ->select(['id', 'user_id', 'expires_at'])
+                    ->from('#__eamnbridge_codes')
+                    ->where($db->quoteName('code_hash').' = '.$db->quote($hash))
+                    ->forUpdate()
+            )->loadObject();
 
-        if ($row === null) {
-            return null;
+            if ($row === null) {
+                $db->transactionCommit();
+
+                return null;
+            }
+
+            $db->setQuery(
+                $db->getQuery(true)
+                    ->delete('#__eamnbridge_codes')
+                    ->where($db->quoteName('id').' = '.(int) $row->id)
+            )->execute();
+            $db->transactionCommit();
+
+            return strtotime($row->expires_at) < time() ? null : (int) $row->user_id;
+        } catch (\Throwable $e) {
+            $db->transactionRollback();
+
+            throw $e;
         }
-
-        // Burn regardless of outcome — one shot only.
-        $db->setQuery(
-            $db->getQuery(true)
-                ->delete('#__eamnbridge_codes')
-                ->where($db->quoteName('id').' = '.(int) $row->id)
-        )->execute();
-
-        if (strtotime($row->expires_at) < time()) {
-            return null;
-        }
-
-        return (int) $row->user_id;
     }
 }

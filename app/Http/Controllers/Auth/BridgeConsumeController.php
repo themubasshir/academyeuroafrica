@@ -40,9 +40,9 @@ class BridgeConsumeController extends Controller
         try {
             $user = $bridge->consumeCode((string) $request->string('code'));
         } catch (RuntimeException $e) {
-            if ($e->getMessage() === 'identity-conflict') {
+            if (in_array($e->getMessage(), ['identity-conflict', 'joomla-admin-not-permitted'], true)) {
                 return redirect()->route('login')->withErrors([
-                    'email' => 'An account with this email already exists. Contact the academy to link your account.',
+                    'email' => 'This Joomla identity cannot be used for Academy sign-in. Contact the academy.',
                 ]);
             }
             throw $e;

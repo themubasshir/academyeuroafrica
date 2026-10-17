@@ -21,10 +21,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // application-level lock so two ticks can never overlap and run the
         // same job twice. File-based lock store (default cache is `database`,
         // which has its own lock table — avoid the bootstrap ordering issue).
+        // Run inline in the cron tick (no runInBackground): it relies on
+        // proc_open'd children that some shared hosts kill when the cron
+        // process exits. Inline is bounded by --max-time=50 and the
+        // withoutOverlapping lock already prevents a second tick colliding.
         $schedule->command('queue:work', ['--stop-when-empty' => true, '--max-time' => 50])
             ->everyMinute()
-            ->withoutOverlapping(30)
-            ->runInBackground();
+            ->withoutOverlapping(30);
     })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([

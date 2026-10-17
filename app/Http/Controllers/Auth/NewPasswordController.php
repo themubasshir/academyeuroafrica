@@ -28,7 +28,13 @@ class NewPasswordController extends Controller
         ]);
 
         $status = Password::reset($credentials, function ($user, $password): void {
-            $user->forceFill(['password' => Hash::make($password), 'remember_token' => Str::random(60)])->save();
+            $user->forceFill([
+                'password' => Hash::make($password),
+                'remember_token' => Str::random(60),
+                // Reset tokens are sent only to the account mailbox, so completing
+                // this one-time flow establishes control of that address.
+                'email_verified_at' => $user->email_verified_at ?? now(),
+            ])->save();
             event(new PasswordReset($user));
         });
 

@@ -29,6 +29,14 @@ class BridgeFlowTest extends TestCase
         $this->assertNotNull(session('bridge_state'));
     }
 
+    public function test_start_ignores_unapproved_redirect_destination(): void
+    {
+        $this->get(route('bridge.start', ['target' => '/admin/users']))
+            ->assertRedirect();
+
+        $this->assertNull(session('url.intended'));
+    }
+
     public function test_consume_rejects_wrong_state(): void
     {
         $this->withSession(['bridge_state' => str_repeat('a', 64)])
@@ -67,6 +75,23 @@ class BridgeFlowTest extends TestCase
         $this->assertAuthenticated();
         $this->assertDatabaseHas('external_identities', ['provider' => 'joomla', 'subject' => '77']);
         $this->assertDatabaseHas('users', ['email' => 'new@joomla.eu']);
+    }
+
+    public function test_consume_refuses_admin_with_joomla_identity(): void
+    {
+        $user = User::factory()->academyAdmin()->create(['status' => 'active']);
+        ExternalIdentity::create([
+            'user_id' => $user->id, 'provider' => 'joomla', 'subject' => '42', 'email' => $user->email, 'linked_at' => now(),
+        ]);
+        Http::fake([
+            '*' => Http::response(['sub' => '42', 'email' => $user->email, 'name' => $user->name, 'groups' => []]),
+        ]);
+
+        $state = str_repeat('s', 64);
+        $this->withSession(['bridge_state' => $state])
+            ->get(route('bridge.consume', ['code' => str_repeat('d', 64), 'state' => $state]));
+
+        $this->assertGuest();
     }
 
     public function test_email_collision_creates_conflict_not_merge(): void

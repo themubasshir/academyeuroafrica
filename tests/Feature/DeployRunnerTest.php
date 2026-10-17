@@ -53,6 +53,22 @@ class DeployRunnerTest extends TestCase
         $this->hit(['token' => 'right-token', 'expires_at' => now()->addMinute()->toIso8601String(), 'run' => 'tinker'])->assertStatus(422);
     }
 
+    public function test_denies_destructive_migrate_fresh(): void
+    {
+        Storage::disk('local')->put('deploy.token', 'right-token');
+
+        $this->hit(['token' => 'right-token', 'expires_at' => now()->addMinute()->toIso8601String(), 'run' => 'migrate:fresh --force'])
+            ->assertStatus(422);
+    }
+
+    public function test_denies_admin_password_rotation_over_http(): void
+    {
+        Storage::disk('local')->put('deploy.token', 'right-token');
+
+        $this->hit(['token' => 'right-token', 'expires_at' => now()->addMinute()->toIso8601String(), 'run' => 'academy:provision-admin --rotate'])
+            ->assertStatus(422);
+    }
+
     public function test_denies_after_done_flag(): void
     {
         Storage::disk('local')->put('deploy.token', 'right-token');

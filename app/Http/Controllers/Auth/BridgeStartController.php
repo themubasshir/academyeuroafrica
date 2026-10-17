@@ -18,15 +18,20 @@ use Illuminate\Support\Str;
  */
 class BridgeStartController extends Controller
 {
+    private const ALLOWED_TARGETS = [
+        '/dashboard' => 'student.dashboard',
+        '/trainer/dashboard' => 'trainer.dashboard',
+        '/admin/dashboard' => 'admin.dashboard',
+    ];
+
     public function __invoke(Request $request): RedirectResponse
     {
         $state = hash('sha256', Str::random(40).$request->session()->getId());
         $request->session()->put('bridge_state', $state);
 
-        // Remember where to land after login (validated same-site path only).
-        $target = $request->string('target', '');
-        if ($target !== '' && str_starts_with($target->toString(), '/') && ! str_starts_with($target->toString(), '//')) {
-            $request->session()->put('url.intended', url($target));
+        $target = $request->string('target')->toString();
+        if (array_key_exists($target, self::ALLOWED_TARGETS)) {
+            $request->session()->put('url.intended', route(self::ALLOWED_TARGETS[$target]));
         }
 
         $base = rtrim((string) config('services.joomla.base_url'), '/');

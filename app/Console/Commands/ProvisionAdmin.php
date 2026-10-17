@@ -7,24 +7,21 @@ use App\Models\User;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 /**
  * One-time production administrator provisioning.
  *
  * Never shipped reachable from a public route — it is only invoked via the
  * IP+token-gated deploy runner (which self-disables) or a host CLI. No default
- * or predictable password: a random one is generated, printed once to the
- * runner's response, and must be changed at first login.
+ * No password is generated or printed. The administrator chooses a password
+ * through Laravel's expiring, one-time password-reset email.
  */
 #[Signature('academy:provision-admin
     {--email= : Administrator email; defaults to storage/app/deploy.admin}
-    {--name= : Display name}
-    {--password= : Explicit password; omit to auto-generate a random one}
-    {--rotate : Reset password on an existing admin account and return a new one}')]
-#[Description('Provision (or rotate) a production administrator. One-time, no default password, safe to re-run.')]
+    {--name= : Display name}')]
+#[Description('Provision a production administrator and send a one-time password-reset link.')]
 class ProvisionAdmin extends Command
 {
     public function handle(): int
@@ -39,36 +36,29 @@ class ProvisionAdmin extends Command
             return self::FAILURE;
         }
 
-        $generated = ! $this->option('password');
-        $password = $this->option('password') ?: Str::password(20);
-        if (strlen($password) < 12) {
-            $this->error('Password must be at least 12 characters.');
+        $user = User::where('email', $email)->first();
+        if ($user !== null && $user->email_verified_at === null) {
+            $this->error('Administrator email is not verified. Complete email verification before requesting a reset link.');
 
             return self::FAILURE;
-        }
-
-        $user = User::where('email', $email)->first();
-        if ($user && ! $this->option('rotate')) {
-            $this->warn("{$email} already exists — nothing changed. Re-run with --rotate to reset the password.");
-
-            return self::SUCCESS;
         }
 
         $user ??= new User(['email' => $email]);
         $user->forceFill([
             'name' => $this->option('name') ?: 'Academy Administrator',
-            'password' => Hash::make($password),
             'status' => 'active',
             'disabled_at' => null,
-            'email_verified_at' => $user->email_verified_at ?? now(),
         ])->save();
         $user->assignRole(Role::ACADEMY_ADMIN);
 
-        $this->info(sprintf('Admin %s: %s', $user->wasRecentlyCreated ? 'created' : 'rotated', $email));
-        if ($generated) {
-            // Printed once to the gated response/log — never stored or e-mailed.
-            $this->warn('One-time password (change at first login): '.$password);
+        $status = Password::sendResetLink(['email' => $email]);
+        if ($status !== Password::RESET_LINK_SENT) {
+            $this->error('Password reset link could not be sent.');
+
+            return self::FAILURE;
         }
+
+        $this->info('Administrator provisioned. A one-time password reset link was sent to the configured email.');
 
         return self::SUCCESS;
     }

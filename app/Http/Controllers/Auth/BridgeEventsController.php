@@ -10,8 +10,9 @@ use Illuminate\Http\Request;
 
 /**
  * Server-to-server account-lifecycle events from the Joomla bridge plugin.
- * HMAC-verified like the code-exchange channel; lets Joomla push email changes,
- * disables and deletes so academy accounts stay in sync.
+ * HMAC-verified like the code-exchange channel; lets Joomla push disables and
+ * deletions. Academy email changes remain local because a Joomla-side compromise
+ * must not change a credential-recovery address.
  *
  * Body: {"sub":"…","event":"email_changed|disabled|deleted","email":"…"}
  */
@@ -42,7 +43,6 @@ class BridgeEventsController extends Controller
         $event = $data['event'] ?? '';
 
         match ($event) {
-            'email_changed' => $user->update(['email' => $data['email'] ?? $user->email]),
             'disabled', 'deleted' => $user->update(['status' => 'disabled', 'disabled_at' => now()]),
             default => null,
         };

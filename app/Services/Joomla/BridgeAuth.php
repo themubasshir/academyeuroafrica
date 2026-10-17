@@ -55,6 +55,10 @@ class BridgeAuth
 
             if ($identity !== null) {
                 $user = $identity->user;
+                if ($user->isAdmin()) {
+                    throw new RuntimeException('joomla-admin-not-permitted');
+                }
+
                 $this->syncUser($user, $claims);
                 AuditLog::record('bridge.login', $user, ['provider' => 'joomla']);
 
@@ -87,19 +91,10 @@ class BridgeAuth
 
     private function syncUser(User $user, array $claims): void
     {
-        $dirty = false;
-
-        if ($user->email !== $claims['email']) {
-            $user->email = $claims['email'];
-            $dirty = true;
-        }
-        if ($user->name !== $claims['name']) {
-            $user->name = $claims['name'];
-            $dirty = true;
+        if ($user->name === $claims['name']) {
+            return;
         }
 
-        if ($dirty) {
-            $user->save();
-        }
+        $user->update(['name' => $claims['name']]);
     }
 }
