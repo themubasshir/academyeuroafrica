@@ -107,6 +107,7 @@ class DeployRunnerTest extends TestCase
             'catalogue:variants --dry-run',
             'academy:mail-status',
             'config:clear',
+            'queue:failed',
         ] as $command) {
             $this->assertNotEquals(422, $this->hit(['token' => 'right-token', 'expires_at' => now()->addMinute()->toIso8601String(), 'run' => $command])->status());
         }
