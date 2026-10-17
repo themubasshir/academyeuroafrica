@@ -27,7 +27,7 @@ class QueueMailTest extends Command
         $user->notify(new StudentAccountNotification(
             'EAMN queue mail test',
             'Controlled production queue test. Reply received if this reached the authorized mailbox.',
-            route('student.notifications'),
+            config('app.url').'/my/notifications',
             'system',
         ));
 
