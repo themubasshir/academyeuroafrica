@@ -42,6 +42,7 @@ class MigrateRunnerController extends Controller
         'academy:deploy-status',
         'academy:queue-mail-test',
         'academy:backup-db',
+        'academy:catalogue-status',
     ];
 
     /**
@@ -60,6 +61,7 @@ class MigrateRunnerController extends Controller
         'academy:deploy-status' => [],
         'academy:queue-mail-test' => [],
         'academy:backup-db' => [],
+        'academy:catalogue-status' => [],
     ];
 
     public function __invoke(Request $request): JsonResponse

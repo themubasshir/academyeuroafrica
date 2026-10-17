@@ -42,7 +42,9 @@ class DocxParser
             foreach ($p->getElementsByTagNameNS($ns, 't') as $t) {
                 $text .= $t->textContent;
             }
-            $text = trim(preg_replace('/\s+/u', ' ', $text));
+            // Some client DOCX XML contains invalid byte sequences; stripping
+            // them keeps MySQL/JSON from rejecting otherwise valid content.
+            $text = trim(preg_replace('/\s+/u', ' ', mb_convert_encoding($text, 'UTF-8', 'UTF-8')));
             if ($text === '') {
                 continue;
             }
