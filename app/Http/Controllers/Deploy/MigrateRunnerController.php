@@ -58,6 +58,7 @@ class MigrateRunnerController extends Controller
         'academy:deploy-status',
         'academy:catalogue-status',
         'academy:mail-status',
+        'academy:backup-db',
     ];
 
     private const ALLOWED_PARAMS = [
