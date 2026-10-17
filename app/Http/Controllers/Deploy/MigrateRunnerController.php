@@ -51,6 +51,13 @@ class MigrateRunnerController extends Controller
      * the allowlist can never be widened into arbitrary input (e.g. an
      * attacker-supplied --email on provisioning).
      */
+    /** Read-only diagnostics may run again with a fresh one-time token. */
+    private const REPEATABLE = [
+        'list --raw',
+        'academy:deploy-status',
+        'academy:catalogue-status',
+    ];
+
     private const ALLOWED_PARAMS = [
         'migrate --force' => ['--force'],
         'db:seed --class=RoleSeeder --force' => ['--class', '--force'],
@@ -93,8 +100,9 @@ class MigrateRunnerController extends Controller
         abort_unless($lock->get(), 429, 'Another deployment command is running.');
 
         try {
+            $repeatable = in_array($command, self::REPEATABLE, true);
             $flag = 'deploy.done.'.md5($command);
-            abort_if($disk->exists($flag), 404);
+            abort_if(! $repeatable && $disk->exists($flag), 404);
 
             // Audit is best-effort: the audit_logs table may not exist yet on a
             // fresh deploy (this runner is what creates it), so never let a
@@ -124,7 +132,9 @@ class MigrateRunnerController extends Controller
             $exit = Artisan::call($cmd, $params);
 
             if ($exit === 0) {
-                $disk->put($flag, now()->toIso8601String());
+                if (! $repeatable) {
+                    $disk->put($flag, now()->toIso8601String());
+                }
                 $disk->delete('deploy.token');
             }
 

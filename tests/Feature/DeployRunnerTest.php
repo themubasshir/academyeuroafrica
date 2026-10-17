@@ -120,6 +120,17 @@ class DeployRunnerTest extends TestCase
         $this->hit($params)->assertNotFound();
     }
 
+    public function test_read_only_diagnostics_can_repeat_with_fresh_token(): void
+    {
+        $params = ['token' => 'right-token', 'expires_at' => now()->addMinute()->toIso8601String(), 'run' => 'academy:deploy-status'];
+
+        Storage::disk('local')->put('deploy.token', 'right-token');
+        $this->hit($params)->assertSuccessful();
+
+        Storage::disk('local')->put('deploy.token', 'right-token');
+        $this->hit($params)->assertSuccessful();
+    }
+
     public function test_provision_admin_creates_academy_admin(): void
     {
         Storage::disk('local')->put('deploy.token', 'right-token');
