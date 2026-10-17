@@ -37,8 +37,10 @@ return new class extends Migration
         Schema::create('failed_jobs', function (Blueprint $table) {
             $table->id();
             $table->string('uuid')->unique();
-            $table->string('connection');
-            $table->string('queue');
+            // Short lengths keep the composite index under the shared-host
+            // 1000-byte InnoDB key limit on utf8mb4 (100+100+~5 bytes/char*4).
+            $table->string('connection', 100);
+            $table->string('queue', 100);
             $table->longText('payload');
             $table->longText('exception');
             $table->timestamp('failed_at')->useCurrent();

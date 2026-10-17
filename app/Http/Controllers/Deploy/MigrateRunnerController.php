@@ -33,6 +33,10 @@ class MigrateRunnerController extends Controller
      */
     private const ALLOWED = [
         'migrate --force',
+        // Drops ALL tables then re-migrates — only safe on a brand-new deploy
+        // where a partially-failed migration left orphan tables with no
+        // migrations row. Destructive; gated by the same token+IP one-shot.
+        'migrate:fresh --force',
         'db:seed --class=RoleSeeder --force',
         'catalogue:import',
         'catalogue:variants',
@@ -52,7 +56,8 @@ class MigrateRunnerController extends Controller
      */
     private const ALLOWED_PARAMS = [
         'migrate --force' => ['--force'],
-        'db:seed --class=RoleSeeder --force' => ['--force'],
+        'migrate:fresh --force' => ['--force'],
+        'db:seed --class=RoleSeeder --force' => ['--class', '--force'],
         'catalogue:import' => [],
         'catalogue:variants' => [],
         'academy:provision-admin' => [],
@@ -90,7 +95,13 @@ class MigrateRunnerController extends Controller
             $flag = 'deploy.done.'.md5($command);
             abort_if($disk->exists($flag), 404);
 
-            AuditLog::record('deploy.migrate', null, ['command' => $command, 'ip' => $request->ip()]);
+            // Audit is best-effort: the audit_logs table may not exist yet on a
+            // fresh deploy (this runner is what creates it), so never let a
+            // logging failure block the command itself.
+            try {
+                AuditLog::record('deploy.migrate', null, ['command' => $command, 'ip' => $request->ip()]);
+            } catch (\Throwable) {
+            }
 
             [$cmd, $args] = array_pad(explode(' ', $command, 2), 2, '');
             $allowedParams = self::ALLOWED_PARAMS[$command] ?? [];
@@ -102,7 +113,7 @@ class MigrateRunnerController extends Controller
                     if (! in_array('--'.$m[1], $allowedParams, true)) {
                         continue;
                     }
-                    if (isset($m[2]) && ! ctype_digit($m[2])) {
+                    if (isset($m[2]) && ! preg_match('/^[\w\\\\]+$/', $m[2])) {
                         abort(422, 'Parameter value not allowed.');
                     }
                     $params['--'.$m[1]] = $m[2] ?? true;
