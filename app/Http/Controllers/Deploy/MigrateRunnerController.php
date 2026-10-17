@@ -35,6 +35,7 @@ class MigrateRunnerController extends Controller
         'migrate --force',
         'db:seed --class=RoleSeeder --force',
         'catalogue:import',
+        'catalogue:import --dry-run',
         'catalogue:variants',
         'academy:provision-admin',
     ];
@@ -48,6 +49,7 @@ class MigrateRunnerController extends Controller
         'migrate --force' => ['--force'],
         'db:seed --class=RoleSeeder --force' => ['--class', '--force'],
         'catalogue:import' => [],
+        'catalogue:import --dry-run' => ['--dry-run'],
         'catalogue:variants' => [],
         'academy:provision-admin' => [],
     ];

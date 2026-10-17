@@ -78,6 +78,14 @@ class DeployRunnerTest extends TestCase
         $this->hit(['token' => 'right-token', 'expires_at' => now()->addMinute()->toIso8601String()])->assertNotFound();
     }
 
+    public function test_allows_catalogue_dry_run_in_allowlist(): void
+    {
+        Storage::disk('local')->put('deploy.token', 'right-token');
+
+        $resp = $this->hit(['token' => 'right-token', 'expires_at' => now()->addMinute()->toIso8601String(), 'run' => 'catalogue:import --dry-run']);
+        $this->assertNotEquals(422, $resp->status());
+    }
+
     public function test_allows_catalogue_commands_in_allowlist(): void
     {
         Storage::disk('local')->put('deploy.token', 'right-token');
