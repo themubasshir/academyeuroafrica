@@ -36,11 +36,35 @@ class MigrateRunnerController extends Controller
         'db:seed --class=RoleSeeder --force',
         'catalogue:import',
         'catalogue:variants',
+        // One-time admin provisioning — admin email is read from
+        // storage/app/deploy.admin (host-controlled), never from the request,
+        // so this cannot be turned into arbitrary-user creation over HTTP.
+        'academy:provision-admin',
+        // Drains queued notifications on hosts without a long-running worker.
+        'queue:work --stop-when-empty --max-time=60',
+        'queue:retry all',
+    ];
+
+    /**
+     * Parameter values allowed per command. Anything not listed is dropped, so
+     * the allowlist can never be widened into arbitrary input (e.g. an
+     * attacker-supplied --email on provisioning).
+     */
+    private const ALLOWED_PARAMS = [
+        'migrate --force' => ['--force'],
+        'db:seed --class=RoleSeeder --force' => ['--force'],
+        'catalogue:import' => [],
+        'catalogue:variants' => [],
+        'academy:provision-admin' => [],
+        'queue:work --stop-when-empty --max-time=60' => ['--stop-when-empty', '--max-time'],
+        'queue:retry all' => [],
     ];
 
     public function __invoke(Request $request): JsonResponse
     {
-        $allowedIps = array_filter(explode(',', (string) env('DEPLOY_ALLOWED_IPS')));
+        // Read the IP allowlist from config (survives `config:cache`), falling
+        // back to raw env for the very first post-deploy request.
+        $allowedIps = array_filter(explode(',', (string) (config('deploy.allowed_ips') ?? env('DEPLOY_ALLOWED_IPS'))));
         abort_if(empty($allowedIps) || ! in_array($request->ip(), $allowedIps, true), 404);
 
         $disk = Storage::disk('local');
@@ -55,7 +79,11 @@ class MigrateRunnerController extends Controller
         $command = $request->string('run', 'migrate --force')->toString();
         abort_unless(in_array($command, self::ALLOWED, true), 422, 'Command not allowed.');
 
-        $lock = Cache::lock('deploy-migrate-runner', 120);
+        // Use the file lock store explicitly: the default `database` cache
+        // store does not have its cache_locks table until `migrate` runs, and
+        // this runner is what performs that migration. File store creates its
+        // own lock dir, so it works pre- and post-migration.
+        $lock = Cache::store('file')->lock('deploy-migrate-runner', 300);
         abort_unless($lock->get(), 429, 'Another deployment command is running.');
 
         try {
@@ -65,9 +93,18 @@ class MigrateRunnerController extends Controller
             AuditLog::record('deploy.migrate', null, ['command' => $command, 'ip' => $request->ip()]);
 
             [$cmd, $args] = array_pad(explode(' ', $command, 2), 2, '');
+            $allowedParams = self::ALLOWED_PARAMS[$command] ?? [];
             $params = [];
             foreach (preg_split('/\s+/', trim($args)) as $tok) {
                 if (preg_match('/^--([a-zA-Z-]+)(?:=(.*))?$/', $tok, $m)) {
+                    // Drop any flag/value not explicitly permitted for this
+                    // command, and reject free-form values outright.
+                    if (! in_array('--'.$m[1], $allowedParams, true)) {
+                        continue;
+                    }
+                    if (isset($m[2]) && ! ctype_digit($m[2])) {
+                        abort(422, 'Parameter value not allowed.');
+                    }
                     $params['--'.$m[1]] = $m[2] ?? true;
                 }
             }

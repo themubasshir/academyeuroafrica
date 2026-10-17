@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -76,5 +78,18 @@ class DeployRunnerTest extends TestCase
         $this->hit($params)->assertSuccessful();
         $this->assertFalse(Storage::disk('local')->exists('deploy.token'));
         $this->hit($params)->assertNotFound();
+    }
+
+    public function test_provision_admin_creates_academy_admin(): void
+    {
+        Storage::disk('local')->put('deploy.token', 'right-token');
+        Storage::disk('local')->put('deploy.admin', 'admin@euroafricamedia.eu');
+
+        $this->hit(['token' => 'right-token', 'expires_at' => now()->addMinute()->toIso8601String(), 'run' => 'academy:provision-admin'])
+            ->assertSuccessful();
+
+        $user = User::where('email', 'admin@euroafricamedia.eu')->first();
+        $this->assertNotNull($user);
+        $this->assertTrue($user->hasRole(Role::ACADEMY_ADMIN));
     }
 }
