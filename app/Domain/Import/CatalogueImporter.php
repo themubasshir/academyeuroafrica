@@ -176,10 +176,10 @@ class CatalogueImporter
         foreach ($paras as $p) {
             $t = $p['text'];
             if ($p['level'] === 1) {
-                if (preg_match('/^MODULE\s+(\d+)\s*[—-]\s*(.+)$/i', $t, $m)) {
+                if (preg_match('/^MODULE\s+(\d+)\s*[—–-]\s*(.+)$/iu', $t, $m)) {
                     $title = trim($m[2]);
                     $cur = null;
-                } elseif (preg_match('/^(\d+)\.(\d+)\s*[—-]\s*(.+)$/', $t, $m)) {
+                } elseif (preg_match('/^(\d+)\.(\d+)\s*[—–-]\s*(.+)$/u', $t, $m)) {
                     $cur = ['title' => trim($m[3]), 'source_key' => "m$m[1]-l$m[2]", 'sections' => []];
                     $lessons[] = $cur;
                     $curSection = null;
