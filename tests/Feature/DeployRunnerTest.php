@@ -102,6 +102,7 @@ class DeployRunnerTest extends TestCase
             'list --raw',
             'academy:deploy-status',
             'academy:queue-mail-test',
+            'academy:backup-db',
         ] as $command) {
             $this->assertNotEquals(422, $this->hit(['token' => 'right-token', 'expires_at' => now()->addMinute()->toIso8601String(), 'run' => $command])->status());
         }
