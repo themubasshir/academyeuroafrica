@@ -129,7 +129,7 @@ class MigrateRunnerController extends Controller
             return response()->json([
                 'ok' => $exit === 0,
                 'command' => $command,
-                'output' => trim(Artisan::output()),
+                'output' => trim(mb_convert_encoding(Artisan::output(), 'UTF-8', 'UTF-8')),
             ], $exit === 0 ? 200 : 500);
         } finally {
             optional($lock)->release();
