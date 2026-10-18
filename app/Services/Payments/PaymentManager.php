@@ -21,18 +21,18 @@ class PaymentManager
         return $gateways;
     }
 
-    public function driver(?string $name = null): PaymentGateway
+    public function driver(?string $name = null, bool $requireEnabled = true): PaymentGateway
     {
         $name ??= config('services.payments.default', 'paypal');
         $gateway = $this->gateways()[$name]
             ?? throw new RuntimeException("Unknown payment gateway: {$name}");
 
-        if ($gateway instanceof PayPalGateway && ! $gateway->isConfigured()) {
-            throw new RuntimeException('PayPal is not completely configured.');
+        if ($requireEnabled && $gateway instanceof PayPalGateway && ! $gateway->isEnabled()) {
+            throw new RuntimeException('PayPal is disabled.');
         }
 
-        if (app()->environment('production') && ! $gateway->isLive()) {
-            throw new RuntimeException("Gateway {$name} is not permitted in production.");
+        if ($gateway instanceof PayPalGateway && ! $gateway->isConfigured()) {
+            throw new RuntimeException('PayPal is not completely configured.');
         }
 
         return $gateway;

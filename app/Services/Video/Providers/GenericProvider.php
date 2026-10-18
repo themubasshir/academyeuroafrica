@@ -20,17 +20,40 @@ class GenericProvider implements VideoProvider
 
     public function embedUrl(CourseVideo $video): string
     {
-        $id = $video->provider_video_id;
+        $id = trim($video->provider_video_id);
 
-        return match (true) {
-            // YouTube nocookie embed
-            preg_match('/^[\w-]{11}$/', $id) === 1 => 'https://www.youtube-nocookie.com/embed/'.$id,
-            // Vimeo numeric id
-            ctype_digit($id) => 'https://player.vimeo.com/video/'.$id,
-            // Already a URL (mp4/embed)
-            str_starts_with($id, 'http') => $id,
-            default => 'about:blank',
-        };
+        if (preg_match('/^[\w-]{11}$/', $id) === 1) {
+            return 'https://www.youtube-nocookie.com/embed/'.$id;
+        }
+
+        if (ctype_digit($id)) {
+            return 'https://player.vimeo.com/video/'.$id;
+        }
+
+        $host = strtolower((string) parse_url($id, PHP_URL_HOST));
+        $path = trim((string) parse_url($id, PHP_URL_PATH), '/');
+
+        if (in_array($host, ['youtu.be', 'www.youtu.be'], true)
+            && preg_match('/^[\w-]{11}$/', $path) === 1) {
+            return 'https://www.youtube-nocookie.com/embed/'.$path;
+        }
+
+        if (in_array($host, ['youtube.com', 'www.youtube.com', 'youtube-nocookie.com', 'www.youtube-nocookie.com'], true)) {
+            parse_str((string) parse_url($id, PHP_URL_QUERY), $query);
+            $youtubeId = $query['v'] ?? str($path)->after('embed/')->before('/')->toString();
+            if (preg_match('/^[\w-]{11}$/', $youtubeId) === 1) {
+                return 'https://www.youtube-nocookie.com/embed/'.$youtubeId;
+            }
+        }
+
+        if (in_array($host, ['vimeo.com', 'www.vimeo.com', 'player.vimeo.com'], true)) {
+            $vimeoId = collect(explode('/', $path))->last(fn ($part) => ctype_digit($part));
+            if ($vimeoId !== null) {
+                return 'https://player.vimeo.com/video/'.$vimeoId;
+            }
+        }
+
+        return 'about:blank';
     }
 
     public function signedPlaybackUrl(CourseVideo $video, User $viewer): ?string

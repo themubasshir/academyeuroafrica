@@ -18,6 +18,10 @@
 | `tests/Feature/FileAuthorizationTest` | enrolled download, non-enrolled 403, guest redirect, MIME allowlist |
 | `tests/Feature/TrainerManageTest` | module/lesson save, unassigned-trainer 403, quiz question create, availability add |
 | `tests/Feature/Payments/PayPalGatewayTest` | PayPal Orders v2 — token, order create, approval, capture validate (amount/currency/ref), pending/denied, webhook verify + idempotency + bad sig, race, enrolment dedupe, refund, cross-user 403, sandbox/live host |
+| `tests/Feature/PaymentGatewaySettingsTest` | administrator authorization, encrypted storage, masked empty fields, Sandbox/Live isolation, connection tests, explicit environment activation |
+| `tests/Feature/PaymentWebhookReconciliationTest` | cancellation, denied/mismatched capture, duplicate refund, full refund expiry, and dispute suspension |
+| `tests/Feature/DirectCheckoutLinkTest` | stable course checkout link, login return, unavailable courses, authoritative package values, expired access, and renewal |
+| `tests/Feature/LearningWorkflowTest` | private PDF/video lessons, ranged playback progress, required/optional activities, quiz pass/fail, assignment grading/resubmission, automatic PDF issuance, idempotency, expiry, and revocation |
 | *(Phases 2–8 suites)* | enrolment unique, webhook idempotency, IDOR policies, quiz engine, double-booking, credit ledger, refund, deploy runner, security headers |
 
 ## Still to add / live-verify

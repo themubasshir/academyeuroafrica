@@ -12,7 +12,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 #[Fillable([
     'programme_id', 'title', 'slug', 'description', 'learning_outcomes',
-    'thumbnail_path', 'delivery_types', 'status', 'access_days', 'sort_order',
+    'thumbnail_path', 'delivery_types', 'status', 'access_days', 'checkout_variant_id',
+    'sort_order',
 ])]
 class Course extends Model
 {
@@ -28,6 +29,12 @@ class Course extends Model
     public function variants(): HasMany
     {
         return $this->hasMany(CourseVariant::class);
+    }
+
+    /** @return BelongsTo<CourseVariant, $this> */
+    public function checkoutVariant(): BelongsTo
+    {
+        return $this->belongsTo(CourseVariant::class, 'checkout_variant_id');
     }
 
     /** @return HasMany<CourseModule, $this> */

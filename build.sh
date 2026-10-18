@@ -112,6 +112,8 @@ grep -q '^APP_ENV=production$' "$APP_STAGE/.env.production.example" || { echo "F
 grep -q '^APP_DEBUG=false$' "$APP_STAGE/.env.production.example" || { echo "FATAL: APP_DEBUG not false"; exit 1; }
 grep -q '^DB_CONNECTION=mysql$' "$APP_STAGE/.env.production.example" || { echo "FATAL: DB_CONNECTION not mysql"; exit 1; }
 grep -q '^APP_BASE_PATH=/home/euroafri/eamn-academy$' "$APP_STAGE/.env.production.example" || { echo "FATAL: APP_BASE_PATH missing"; exit 1; }
+grep -q '^PAYPAL_ENABLED=false$' "$APP_STAGE/.env.production.example" || { echo "FATAL: PayPal must ship disabled"; exit 1; }
+grep -q '^PAYPAL_MODE=sandbox$' "$APP_STAGE/.env.production.example" || { echo "FATAL: PayPal must ship in sandbox mode"; exit 1; }
 [ "$(grep -c '^APP_BASE_PATH=' "$APP_STAGE/.env.production.example")" = "1" ] || { echo "FATAL: duplicate APP_BASE_PATH"; exit 1; }
 ! grep -q '^DB_CONNECTION=sqlite$' "$APP_STAGE/.env.production.example" || { echo "FATAL: sqlite in prod template"; exit 1; }
 
@@ -132,6 +134,10 @@ test -f "$PUB_STAGE/build/manifest.json" || { echo "FATAL: Vite manifest missing
 test -f "$APP_STAGE/artisan" || { echo "FATAL: artisan missing from app staging"; exit 1; }
 test -f "$APP_STAGE/vendor/autoload.php" || { echo "FATAL: composer autoloader missing"; exit 1; }
 test -d "$APP_STAGE/vendor/livewire/livewire" || { echo "FATAL: livewire package missing"; exit 1; }
+test -f "$APP_STAGE/database/migrations/2026_10_18_131446_add_learning_workflow_fields.php" || { echo "FATAL: learning migration missing"; exit 1; }
+test -f "$APP_STAGE/deployment/phpmyadmin/2026_10_18_learning_workflow.sql" || { echo "FATAL: learning SQL missing"; exit 1; }
+test -f "$APP_STAGE/FINAL_LEARNING_ACCEPTANCE.md" || { echo "FATAL: learning acceptance guide missing"; exit 1; }
+test -d "$APP_STAGE/storage/app/private" || { echo "FATAL: private storage root missing"; exit 1; }
 [ ! -e "$APP_STAGE/database/database.sqlite" ] || { echo "FATAL: dev SQLite DB staged"; exit 1; }
 if find "$APP_STAGE" "$PUB_STAGE" \( -name '.env' -o -name '.env.*' \) ! -name '.env.production.example' -print -quit | grep -q .; then
     echo "FATAL: .env present in staging"; exit 1

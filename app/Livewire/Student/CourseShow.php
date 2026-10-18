@@ -23,6 +23,7 @@ class CourseShow extends Component
     public function mount(Enrolment $enrolment): void
     {
         $this->authorize('view', $enrolment);
+        abort_unless($enrolment->isActive(), 403, 'This enrolment has expired.');
     }
 
     /** All materials on the course tree (course → module → lesson) visible to this student. */

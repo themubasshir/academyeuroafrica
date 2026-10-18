@@ -9,6 +9,8 @@
     ];
     $completedCount = $progress->filter()->count();
     $lessonCount = $modules->sum(fn ($m) => $m->lessons->count());
+    $requiredLessons = $modules->flatMap->lessons->where('is_required', true);
+    $requiredCompleted = $requiredLessons->filter(fn ($lesson) => isset($progress[$lesson->id]))->count();
 @endphp
 <div class="mx-auto max-w-6xl space-y-6">
     <a href="{{ route('student.dashboard') }}" class="link text-sm">&larr; My courses</a>
@@ -66,6 +68,7 @@
                     <h2 id="ov-progress" class="register">Your progress</h2>
                     <p class="mt-3 font-display text-3xl font-semibold text-ink-950">{{ $completedCount }}<span class="text-lg text-ink-500">/{{ $lessonCount }}</span></p>
                     <p class="mt-1 text-sm text-ink-600">lessons completed</p>
+                    <p class="mt-1 text-xs text-ink-500">{{ $requiredCompleted }}/{{ $requiredLessons->count() }} required lessons complete</p>
                     @if ($lessonCount > 0)
                         <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-paper-200" role="progressbar" aria-valuenow="{{ round($completedCount / $lessonCount * 100) }}" aria-valuemin="0" aria-valuemax="100">
                             <div class="h-full bg-reg-600" style="width: {{ round($completedCount / $lessonCount * 100) }}%"></div>
@@ -112,7 +115,8 @@
                                             @if ($done)✓@elseif($lesson->type === 'video')▶@else·@endif
                                         </span>
                                         <span class="flex-1 text-sm font-medium text-ink-800">{{ $lesson->title }}</span>
-                                        @if ($lesson->video)<span class="badge-gray">video</span>@endif
+                                        <span class="badge-gray">{{ $lesson->is_required ? 'Required' : 'Optional' }}</span>
+                                        @if ($lesson->video)<span class="badge-gray">video</span>@elseif($lesson->type === 'pdf')<span class="badge-gray">PDF</span>@endif
                                     </a>
                                 </li>
                             @endforeach

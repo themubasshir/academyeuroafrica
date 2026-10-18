@@ -54,6 +54,20 @@ class QuizService
         abort_if($attempt->isExpired(), 422, 'Time limit exceeded.');
         abort_unless(in_array($questionId, $attempt->question_order ?? [], true), 422, 'Question not part of this attempt.');
 
+        $question = $attempt->quiz->questions()->with('options')->findOrFail($questionId);
+        $optionIds = array_values(array_unique(array_map('intval', $optionIds)));
+        $validOptionIds = $question->options->pluck('id')->all();
+        abort_unless(array_diff($optionIds, $validOptionIds) === [], 422, 'Invalid answer option.');
+        if (in_array($question->type, ['mcq', 'tf'], true)) {
+            abort_if(count($optionIds) > 1, 422, 'Select one answer.');
+        }
+        if (in_array($question->type, ['short', 'essay'], true)) {
+            abort_if(mb_strlen((string) $text) > 50_000, 422, 'Answer is too long.');
+            $optionIds = [];
+        } else {
+            $text = null;
+        }
+
         QuizAnswer::updateOrCreate(
             ['quiz_attempt_id' => $attempt->id, 'quiz_question_id' => $questionId],
             ['chosen_option_ids' => $optionIds ?: null, 'text_answer' => $text]
@@ -148,12 +162,11 @@ class QuizService
 
     private function enrolled(Quiz $quiz, User $user): bool
     {
-        return Enrolment::where('user_id', $user->id)
+        $enrolment = Enrolment::where('user_id', $user->id)
             ->where('status', 'active')
-            ->where(function ($query) {
-                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
-            })
             ->whereHas('variant', fn ($q) => $q->where('course_id', $quiz->course_id))
-            ->exists();
+            ->first();
+
+        return $enrolment?->isActive() ?? false;
     }
 }

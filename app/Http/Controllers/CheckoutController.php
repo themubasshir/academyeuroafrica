@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Checkout\OrderService;
+use App\Models\AuditLog;
+use App\Models\Course;
 use App\Models\CourseVariant;
 use App\Models\Order;
 use App\Services\Payments\PaymentManager;
@@ -25,6 +27,32 @@ class CheckoutController extends Controller
             'variant' => $variant->load('course'),
             'gateway' => config('services.payments.default', 'paypal'),
         ]);
+    }
+
+    public function course(Request $request, Course $course): RedirectResponse
+    {
+        $variant = $course->checkoutVariant()->with('course')->first();
+
+        abort_unless(
+            $course->isPublished()
+                && $variant !== null
+                && $variant->course_id === $course->id
+                && $variant->isPurchasable(),
+            404
+        );
+
+        if ($request->user() === null) {
+            $request->session()->put('bridge_intent', [
+                'variant_id' => $variant->id,
+                'course_id' => $course->id,
+                'expires_at' => now()->addMinutes(10)->timestamp,
+            ]);
+            $request->session()->put('url.intended', route('checkout.course', ['course' => $course->slug]));
+
+            return redirect()->route('login');
+        }
+
+        return redirect()->route('checkout.show', $variant);
     }
 
     public function store(Request $request, CourseVariant $variant): RedirectResponse
@@ -99,7 +127,20 @@ class CheckoutController extends Controller
     {
         $order = null;
         if ($token = $request->query('token')) {
-            $order = Order::whereHas('transactions', fn ($q) => $q->where('gateway_transaction_id', $token))->first();
+            $order = Order::whereHas('transactions', fn ($query) => $query
+                ->where('gateway', 'paypal')
+                ->where('gateway_transaction_id', $token))
+                ->where('user_id', $request->user()->id)
+                ->first();
+
+            if ($order !== null && $order->status === 'pending') {
+                $order->update(['status' => 'cancelled']);
+                $order->transactions()
+                    ->where('gateway', 'paypal')
+                    ->where('gateway_transaction_id', $token)
+                    ->update(['status' => 'cancelled']);
+                AuditLog::record('order.cancelled', $order, ['gateway' => 'paypal']);
+            }
         }
 
         return view('checkout.cancelled', ['order' => $order]);

@@ -3,8 +3,10 @@
 namespace App\Livewire\Admin;
 
 use App\Domain\Certification\CertificateIssuanceService;
+use App\Domain\Certification\CertificateTrigger;
 use App\Models\Certificate;
 use App\Models\Enrolment;
+use App\Models\EnrolmentApproval;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -40,6 +42,17 @@ class Certificates extends Component
         $enrolment = Enrolment::findOrFail($enrolmentId);
         $service->issueIfEligible($enrolment, auth()->user(), force: true);
         session()->flash('saved', 'Issued (or re-confirmed) certificate.');
+    }
+
+    public function approve(int $enrolmentId): void
+    {
+        $enrolment = Enrolment::findOrFail($enrolmentId);
+        EnrolmentApproval::firstOrCreate(
+            ['enrolment_id' => $enrolment->id, 'kind' => 'admin'],
+            ['approver_id' => auth()->id()],
+        );
+        CertificateTrigger::for($enrolment);
+        session()->flash('saved', 'Administrator approval recorded and eligibility recalculated.');
     }
 
     public function render()

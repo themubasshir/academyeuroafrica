@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['enrolment_id', 'lesson_id', 'completed_at', 'position_seconds'])]
+#[Fillable(['enrolment_id', 'lesson_id', 'completed_at', 'position_seconds', 'progress_percent', 'acknowledged_at'])]
 class LessonProgress extends Model
 {
     use HasFactory;
@@ -26,6 +26,10 @@ class LessonProgress extends Model
 
     protected function casts(): array
     {
-        return ['completed_at' => 'datetime'];
+        return [
+            'completed_at' => 'datetime',
+            'acknowledged_at' => 'datetime',
+            'progress_percent' => 'integer',
+        ];
     }
 }

@@ -14,6 +14,7 @@
             <p class="mt-1.5 text-sm font-medium {{ $paypalConfigured ? 'text-emerald-700' : 'text-amber-700' }}">
                 {{ $paypalConfigured ? 'PayPal configured' : 'PayPal not configured' }} · {{ $paypalMode }} · default: {{ $gateway }}
             </p>
+            <a href="{{ route('admin.settings.payment-gateway') }}" class="btn-secondary btn-sm mt-4">Payment Gateway Settings</a>
         </div>
     </div>
 

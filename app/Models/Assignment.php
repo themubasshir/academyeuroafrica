@@ -11,7 +11,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'course_id', 'creator_id', 'title', 'instructions', 'due_at', 'max_points',
-    'audience', 'group_id', 'status', 'grades_released',
+    'is_required', 'evaluation_type', 'passing_score', 'allow_resubmission',
+    'max_submissions', 'allow_late_submissions', 'audience', 'group_id', 'status',
+    'grades_released',
 ])]
 class Assignment extends Model
 {
@@ -60,11 +62,9 @@ class Assignment extends Model
                 && GroupMember::where('group_id', $this->group_id)->where('user_id', $user->id)->exists(),
             default => Enrolment::where('user_id', $user->id)
                 ->where('status', 'active')
-                ->where(function ($query) {
-                    $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
-                })
                 ->whereHas('variant', fn ($q) => $q->where('course_id', $this->course_id))
-                ->exists(),
+                ->get()
+                ->contains(fn (Enrolment $enrolment) => $enrolment->isActive()),
         };
     }
 
@@ -73,6 +73,9 @@ class Assignment extends Model
         return [
             'due_at' => 'datetime',
             'grades_released' => 'boolean',
+            'is_required' => 'boolean',
+            'allow_resubmission' => 'boolean',
+            'allow_late_submissions' => 'boolean',
         ];
     }
 }

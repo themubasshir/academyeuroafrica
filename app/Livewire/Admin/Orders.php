@@ -42,7 +42,7 @@ class Orders extends Component
     public function render()
     {
         return view('livewire.admin.orders', [
-            'orders' => Order::with('user', 'items')->latest()->limit(100)->get(),
+            'orders' => Order::with(['user', 'items', 'transactions.refunds'])->latest()->limit(100)->get(),
         ])->layout('layouts::app', ['title' => 'Orders']);
     }
 }

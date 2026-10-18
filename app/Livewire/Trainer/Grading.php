@@ -17,6 +17,8 @@ class Grading extends Component
 
     public array $feedbacks = [];
 
+    public array $passed = [];
+
     public function mount(Assignment $assignment): void
     {
         $this->authorize('manageContent', $assignment->course);
@@ -26,19 +28,27 @@ class Grading extends Component
     {
         $submission = $this->assignment->submissions()->findOrFail($submissionId);
         $this->authorize('grade', $submission);
+        abort_unless($submission->status === 'submitted', 422, 'Only submitted work can be graded.');
 
-        $score = (int) ($this->scores[$submissionId] ?? 0);
+        $isPassFail = $this->assignment->evaluation_type === 'pass_fail';
+        $passed = $isPassFail
+            ? (bool) ($this->passed[$submissionId] ?? false)
+            : null;
+        $score = $isPassFail
+            ? ($passed ? $this->assignment->max_points : 0)
+            : (int) ($this->scores[$submissionId] ?? 0);
         abort_if($score < 0 || $score > $this->assignment->max_points, 422, 'Score must be within the assignment range.');
 
         $feedback = $this->feedbacks[$submissionId] ?? null;
         $grade = AssignmentGrade::where('assignment_submission_id', $submissionId)->first();
-        $changed = $grade === null || $grade->score !== $score || $grade->feedback !== $feedback || $grade->status !== 'released';
+        $changed = $grade === null || $grade->score !== $score || $grade->passed !== $passed || $grade->feedback !== $feedback || $grade->status !== 'released';
 
         AssignmentGrade::updateOrCreate(
             ['assignment_submission_id' => $submissionId],
             [
                 'grader_id' => auth()->id(),
                 'score' => $score,
+                'passed' => $passed,
                 'feedback' => $feedback,
                 'status' => 'released',
             ]

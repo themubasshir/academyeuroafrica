@@ -16,6 +16,11 @@
                     <span class="min-w-0 flex-1">
                         <span class="block truncate font-display text-base font-semibold text-ink-950 group-hover:text-reg-700">{{ $course->title }}</span>
                         <span class="mt-0.5 block truncate text-xs text-ink-500">{{ $course->programme->name }} · {{ $enrolment->variant->name }}</span>
+                        @if ($enrolment->isExpired())
+                            <span class="mt-0.5 block text-xs font-medium text-red-700">Access expired {{ ($enrolment->entitlement_ended_at ?? $enrolment->expires_at)?->format('j M Y') }}</span>
+                        @elseif (($enrolment->entitlement_ended_at ?? $enrolment->expires_at))
+                            <span class="mt-0.5 block text-xs text-ink-500">Access until {{ ($enrolment->entitlement_ended_at ?? $enrolment->expires_at)->format('j M Y') }}</span>
+                        @endif
                     </span>
                     <span class="shrink-0 text-sm font-semibold text-reg-700">Continue →</span>
                 </a>

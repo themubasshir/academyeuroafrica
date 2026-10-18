@@ -7,14 +7,13 @@ use App\Models\Enrolment;
 
 /**
  * Fires the issuance check after trusted domain events (lesson completion,
- * quiz grading, assignment release, attendance, approval). Dispatches onto
- * the `database` queue when it's running; falls back to synchronous
- * evaluation so local/test flows still issue immediately.
+ * quiz grading, assignment release, attendance, approval). It runs
+ * synchronously so shared hosting does not depend on a permanent queue worker.
  */
 class CertificateTrigger
 {
     public static function for(Enrolment $enrolment): void
     {
-        MaybeIssueCertificate::dispatch($enrolment->id);
+        MaybeIssueCertificate::dispatchSync($enrolment->id);
     }
 }

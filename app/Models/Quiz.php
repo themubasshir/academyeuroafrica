@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'course_id', 'creator_id', 'title', 'instructions', 'time_limit_minutes',
-    'max_attempts', 'passing_score', 'randomise_questions', 'randomise_options',
+    'max_attempts', 'passing_score', 'is_required', 'randomise_questions', 'randomise_options',
     'release_results', 'status',
 ])]
 class Quiz extends Model
@@ -40,6 +40,7 @@ class Quiz extends Model
         return [
             'randomise_questions' => 'boolean',
             'randomise_options' => 'boolean',
+            'is_required' => 'boolean',
         ];
     }
 }

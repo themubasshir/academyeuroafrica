@@ -15,8 +15,9 @@
                         {{ $v->course->title }} — {{ $v->name }}
                     </p>
                     <p class="text-xs text-ink-500">
-                        {{ $v->course->programme->name }} · {{ ucfirst($v->delivery_type) }}
-                        · {{ $v->duration ?? 'no duration' }}
+                         {{ $v->course->programme->name }} · {{ ucfirst($v->delivery_type) }}
+                         · {{ $v->duration ?? 'no duration' }}
+                         · {{ ucfirst($v->expiry_policy ?? 'none') }}
                     </p>
                     <p class="mt-0.5 text-xs text-ink-400">
                         {{ $v->price_source }}
@@ -57,7 +58,10 @@
                         <input wire:model="draft.{{ $v->id }}.name" class="input" aria-label="Package name">
                         <input wire:model="draft.{{ $v->id }}.price" type="number" step="0.01" min="0"
                                placeholder="Price EUR (blank = POA)" class="input" aria-label="Price">
-                        <input wire:model="draft.{{ $v->id }}.duration" placeholder="Duration" class="input" aria-label="Duration">
+                         <input wire:model="draft.{{ $v->id }}.duration" placeholder="Legacy label" class="input" aria-label="Duration">
+                         <select wire:model="draft.{{ $v->id }}.expiry_policy" class="input" aria-label="Expiry policy"><option value="none">No scheduled expiry</option><option value="duration">Duration</option><option value="fixed">Fixed date</option></select>
+                         <input wire:model="draft.{{ $v->id }}.access_duration_days" type="number" min="1" placeholder="Access days" class="input" aria-label="Access duration days">
+                         <input wire:model="draft.{{ $v->id }}.fixed_expiry_at" type="datetime-local" class="input" aria-label="Fixed expiry date">
                     </div>
                     <div class="flex gap-3">
                         <button wire:click="save({{ $v->id }})" class="btn-primary btn-sm">Save</button>

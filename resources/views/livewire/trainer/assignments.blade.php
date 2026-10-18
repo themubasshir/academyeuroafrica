@@ -14,6 +14,18 @@
             <textarea wire:model="instructions" placeholder="Instructions" rows="3" class="input sm:col-span-2"></textarea>
             <input type="datetime-local" wire:model="dueAt" class="input" title="Due date">
             <input type="number" wire:model="maxPoints" min="1" class="input" placeholder="Max points">
+            <select wire:model.live="evaluationType" class="input" aria-label="Evaluation type">
+                <option value="numeric">Numeric grade</option>
+                <option value="pass_fail">Pass or fail</option>
+            </select>
+            @if ($evaluationType === 'numeric')
+                <label class="text-sm text-ink-700"><span class="label">Passing percentage</span><input type="number" wire:model="passingScore" min="0" max="100" class="input mt-1"></label>
+            @endif
+            <select wire:model="status" class="input" aria-label="Assignment status"><option value="draft">Draft</option><option value="published">Published</option></select>
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="isRequired" class="rounded text-reg-600"> Required for certificate</label>
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="allowResubmission" class="rounded text-reg-600"> Allow resubmission</label>
+            <label class="text-sm"><span class="label">Maximum submissions</span><input type="number" wire:model="maxSubmissions" min="1" max="20" class="input mt-1"></label>
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="allowLateSubmissions" class="rounded text-reg-600"> Allow late submissions</label>
             <select wire:model.live="audience" class="input">
                 <option value="course">All enrolled</option><option value="group">A group</option><option value="students">Specific students</option>
             </select>
@@ -44,7 +56,7 @@
                    class="flex items-center justify-between card p-4 hover:border-reg-500/60">
                     <div>
                         <p class="font-medium text-sm">{{ $a->title }}</p>
-                        <p class="text-xs text-ink-500">{{ $a->submissions_count }} submission(s) · {{ ucfirst($a->audience) }}</p>
+                        <p class="text-xs text-ink-500">{{ $a->submissions_count }} submission(s) · {{ ucfirst($a->audience) }} · {{ ucfirst($a->status) }} · {{ $a->is_required ? 'Required' : 'Optional' }}</p>
                     </div>
                     <span class="text-sm text-ink-500">{{ $a->due_at?->format('M j') ?? '—' }}</span>
                 </a>

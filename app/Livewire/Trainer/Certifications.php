@@ -3,6 +3,7 @@
 namespace App\Livewire\Trainer;
 
 use App\Domain\Certification\CertificateIssuanceService;
+use App\Domain\Certification\CertificateTrigger;
 use App\Domain\Certification\CertificationEligibilityService;
 use App\Models\Course;
 use App\Models\Enrolment;
@@ -25,13 +26,14 @@ class Certifications extends Component
             ['enrolment_id' => $enrolment->id, 'kind' => 'trainer'],
             ['approver_id' => auth()->id()]
         );
+        CertificateTrigger::for($enrolment);
         session()->flash('saved', 'Completion approved.');
     }
 
     public function requestReevaluation(int $enrolmentId, CertificateIssuanceService $service): void
     {
         $enrolment = $this->scopedEnrolment($enrolmentId);
-        $service->issueIfEligible($enrolment, auth()->user(), force: true);
+        $service->issueIfEligible($enrolment, auth()->user());
         session()->flash('saved', 'Re-evaluation requested.');
     }
 

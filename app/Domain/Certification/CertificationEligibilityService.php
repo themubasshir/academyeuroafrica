@@ -36,33 +36,41 @@ class CertificationEligibilityService
         $checks = [];
 
         // Enrolment must be live (expired blocks everything).
-        $expired = $enrolment->expires_at?->isPast() ?? false;
+        $expired = ! $enrolment->isActive();
         $checks['enrolment'] = [
             'required' => true,
-            'done' => ! $expired && $enrolment->status === 'active',
+            'done' => ! $expired,
             'detail' => $expired ? 'Enrolment expired' : 'Active enrolment',
         ];
 
         if ($policy->require_lessons) {
-            $total = $course->lessons()->where('lessons.status', 'published')->count();
-            $met = $enrolment->lessonProgress()->whereNotNull('completed_at')->count();
+            $publishedLessonCount = $course->lessons()->where('lessons.status', 'published')->count();
+            $requiredLessonIds = $course->lessons()
+                ->where('lessons.status', 'published')
+                ->where('lessons.is_required', true)
+                ->pluck('lessons.id');
+            $total = $requiredLessonIds->count();
+            $met = $enrolment->lessonProgress()
+                ->whereIn('lesson_id', $requiredLessonIds)
+                ->whereNotNull('completed_at')
+                ->count();
             $checks['lessons'] = [
-                'required' => true, 'done' => $total > 0 && $met >= $total,
+                'required' => true, 'done' => $publishedLessonCount > 0 && $met >= $total,
                 'met' => $met, 'total' => $total,
                 'detail' => "$met of $total lessons completed",
             ];
         }
 
         if ($policy->require_quizzes) {
-            $quizzes = $course->quizzes()->where('status', 'published')->get();
+            $quizzes = $course->quizzes()->where('status', 'published')->where('is_required', true)->get();
             $passed = 0;
             foreach ($quizzes as $quiz) {
-                $threshold = $policy->min_quiz_percent ?? $quiz->passing_score ?? 0;
+                $threshold = $policy->min_quiz_percent ?? $quiz->passing_score;
                 // Best graded attempt counts; in_progress/submitted-ungraded don't.
                 $best = QuizAttempt::where('quiz_id', $quiz->id)
                     ->where('user_id', $user->id)
                     ->where('status', 'graded')->max('score') ?? -1;
-                if ($best >= $threshold) {
+                if ($threshold !== null && $best >= $threshold) {
                     $passed++;
                 }
             }
@@ -74,7 +82,7 @@ class CertificationEligibilityService
         }
 
         if ($policy->require_assignments) {
-            $assignments = $course->assignments()->where('status', 'published')->get();
+            $assignments = $course->assignments()->where('status', 'published')->where('is_required', true)->get();
             $passed = 0;
             foreach ($assignments as $a) {
                 if ($this->assignmentPassed($a, $user->id, $policy->min_assignment_percent)) {
@@ -142,15 +150,23 @@ class CertificationEligibilityService
     private function assignmentPassed(Assignment $a, int $userId, ?int $minPercent): bool
     {
         $submission = AssignmentSubmission::where('assignment_id', $a->id)
-            ->where('user_id', $userId)->with('grade')->first();
+            ->where('user_id', $userId)
+            ->whereHas('grade', fn ($query) => $query->where('status', 'released'))
+            ->with('grade')
+            ->latest('attempt_no')
+            ->first();
 
         if (! $submission?->grade || $submission->grade->status !== 'released') {
             return false; // ungraded, draft or returned grades block
         }
 
+        if ($a->evaluation_type === 'pass_fail') {
+            return $submission->grade->passed === true;
+        }
+
         $max = max(1, $a->max_points);
         $pct = $submission->grade->score / $max * 100;
 
-        return $pct >= ($minPercent ?? 50); // default pass = 50%
+        return $pct >= ($minPercent ?? $a->passing_score ?? 50);
     }
 }

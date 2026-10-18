@@ -91,6 +91,29 @@ class Courses extends Component
         $course->update(['status' => 'archived']);
     }
 
+    public function assignCheckoutPackage(int $courseId, mixed $variantId): void
+    {
+        $course = Course::findOrFail($courseId);
+
+        if ($variantId === null || $variantId === '') {
+            $course->update(['checkout_variant_id' => null]);
+
+            return;
+        }
+
+        $variant = $course->variants()->findOrFail((int) $variantId);
+        abort_unless(
+            $variant->availability === 'paid'
+                && $variant->status === 'published'
+                && $variant->approval_status === 'approved'
+                && $variant->price_cents !== null,
+            422,
+            'Choose an approved, published package with a fixed price.'
+        );
+
+        $course->update(['checkout_variant_id' => $variant->id]);
+    }
+
     public function resetForm(): void
     {
         $this->reset(['editingId', 'title', 'programmeId', 'description', 'learningOutcomes', 'deliveryTypes', 'accessDays', 'sortOrder', 'trainerId']);
@@ -101,7 +124,7 @@ class Courses extends Component
     public function render()
     {
         return view('livewire.admin.courses', [
-            'courses' => Course::with('programme', 'variants')->latest()->paginate(25),
+            'courses' => Course::with(['programme', 'variants', 'checkoutVariant.course'])->latest()->paginate(25),
             'programmes' => Programme::orderBy('name')->get(),
             'trainers' => User::whereHas('roles', fn ($query) => $query->where('name', 'trainer'))->orderBy('name')->get(),
         ])->layout('layouts::app', ['title' => 'Courses']);

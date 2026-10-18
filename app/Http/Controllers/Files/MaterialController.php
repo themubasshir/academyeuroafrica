@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AssignmentAttachment;
 use App\Models\Course;
 use App\Models\Enrolment;
+use App\Models\Lesson;
 use App\Models\Material;
 use App\Models\TrainerAssignment;
 use Illuminate\Support\Facades\Storage;
@@ -24,6 +25,33 @@ class MaterialController extends Controller
         $this->authorizeMaterial(request()->user(), $material);
 
         return $this->files->download($material);
+    }
+
+    public function inline(Material $material)
+    {
+        $this->authorizeMaterial(request()->user(), $material);
+        abort_unless($material->mime === 'application/pdf', 404);
+        abort_unless(Storage::disk($material->disk)->exists($material->path), 404);
+
+        return response()->file(Storage::disk($material->disk)->path($material->path), [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function stream(Material $material)
+    {
+        $this->authorizeMaterial(request()->user(), $material);
+        abort_unless(in_array($material->mime, FileService::VIDEO_MIME, true), 404);
+        abort_unless(Storage::disk($material->disk)->exists($material->path), 404);
+
+        return response()->file(Storage::disk($material->disk)->path($material->path), [
+            'Content-Type' => $material->mime,
+            'Content-Disposition' => 'inline',
+            'Accept-Ranges' => 'bytes',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function attachment(AssignmentAttachment $attachment)
@@ -59,11 +87,15 @@ class MaterialController extends Controller
 
         // Student — must be enrolled on the owning course AND inside the
         // material's audience (course-wide | group | individual).
-        $enrolled = Enrolment::where('user_id', $user->id)
+        if ($material->attachable_type === Lesson::class) {
+            abort_unless($material->attachable?->isPublished(), 403);
+        }
+
+        $enrolment = Enrolment::where('user_id', $user->id)
             ->where('status', 'active')
             ->whereHas('variant', fn ($q) => $q->where('course_id', $course->id))
-            ->exists();
-        abort_unless($enrolled, 403);
+            ->first();
+        abort_unless($enrolment?->isActive(), 403);
         abort_unless($material->visibleTo($user), 403);
     }
 }

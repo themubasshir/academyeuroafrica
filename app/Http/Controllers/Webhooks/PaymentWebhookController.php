@@ -18,7 +18,9 @@ class PaymentWebhookController extends Controller
 
     public function __invoke(Request $request, string $gateway): JsonResponse
     {
-        $driver = $this->payments->driver($gateway);
+        // Disabling new checkouts must not suppress refunds or disputes for
+        // payments that PayPal already processed.
+        $driver = $this->payments->driver($gateway, requireEnabled: false);
 
         try {
             $event = $driver->verifyWebhook($request);

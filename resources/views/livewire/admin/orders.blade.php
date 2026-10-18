@@ -21,17 +21,30 @@
     <div class="card overflow-x-auto">
         <table class="table-base">
             <thead class="bg-paper-50">
-                <tr><th>Reference</th><th>Customer</th><th>Items</th><th class="text-right">Total</th><th class="text-right">Status</th><th class="text-right">Action</th></tr>
+                <tr><th>Reference</th><th>Customer</th><th>Items</th><th>Payment</th><th class="text-right">Total</th><th class="text-right">Order</th><th class="text-right">Action</th></tr>
             </thead>
             <tbody>
                 @forelse ($orders as $o)
                     <tr>
+                        @php $transaction = $o->transactions->sortByDesc('id')->first(); @endphp
                         <td class="folio">{{ $o->reference }}</td>
                         <td>{{ $o->user->email }}</td>
                         <td>{{ $o->items->count() }}</td>
+                        <td>
+                            @if ($transaction)
+                                <span class="font-medium">{{ ucfirst($transaction->gateway) }}</span>
+                                <span class="block text-xs text-ink-500">{{ ucfirst($transaction->status) }}@if ($transaction->refunds->isNotEmpty()) · {{ $transaction->refunds->count() }} refund(s)@endif</span>
+                            @else
+                                <span class="text-ink-500">Not started</span>
+                            @endif
+                        </td>
                         <td class="text-right font-semibold">{{ number_format($o->total_cents/100,2) }} {{ $o->currency }}</td>
                         <td class="text-right">
-                            <span @class(['badge-green' => $o->isPaid(), 'badge-amber' => ! $o->isPaid()])>{{ ucfirst($o->status) }}</span>
+                            <span @class([
+                                'badge-green' => $o->isPaid(),
+                                'badge-amber' => in_array($o->status, ['pending', 'cancelled'], true),
+                                'badge-red' => in_array($o->status, ['failed', 'disputed', 'dispute_resolved', 'refunded'], true),
+                            ])>{{ ucfirst($o->status) }}</span>
                         </td>
                         <td class="text-right">
                             @if ($o->isPaid() && $o->refundedCents() < $o->total_cents)
@@ -42,7 +55,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="py-8 text-center text-ink-500">No orders.</td></tr>
+                    <tr><td colspan="7" class="py-8 text-center text-ink-500">No orders.</td></tr>
                 @endforelse
             </tbody>
         </table>

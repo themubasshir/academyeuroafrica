@@ -40,6 +40,9 @@ Route::get('/', function () {
 // Public catalogue
 Route::livewire('programmes/{programme}', 'catalogue.programme-show')->name('programme.show');
 Route::livewire('courses/{course}', 'catalogue.course-show')->name('course.show');
+Route::get('checkout/course/{course:slug}', [CheckoutController::class, 'course'])
+    ->middleware('active')
+    ->name('checkout.course');
 
 // Local credential login (staff fallback + development).
 Route::middleware('guest')->group(function () {
@@ -125,6 +128,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     // Authorised private file delivery
     Route::get('files/materials/{material}', [MaterialController::class, 'show'])
         ->name('files.material');
+    Route::get('files/materials/{material}/view', [MaterialController::class, 'inline'])
+        ->name('files.material.inline');
+    Route::get('files/materials/{material}/stream', [MaterialController::class, 'stream'])
+        ->name('files.material.stream');
     Route::get('files/attachments/{attachment}', [MaterialController::class, 'attachment'])
         ->name('files.attachment');
 });
@@ -177,6 +184,7 @@ Route::middleware(['auth', 'active', 'role:trainer,super-admin,academy-admin'])
     ->prefix('trainer')->name('trainer.')->group(function () {
         Route::livewire('dashboard', 'trainer.dashboard')->name('dashboard');
         Route::livewire('courses/{course}/manage', 'trainer.course-manage')->name('course.manage');
+        Route::livewire('courses/{course}/lessons/{lesson}/preview', 'trainer.lesson-preview')->name('lesson.preview');
         Route::livewire('courses/{course}/sessions', 'trainer.sessions')->name('sessions');
         Route::livewire('courses/{course}/groups', 'trainer.groups')->name('groups');
         Route::livewire('courses/{course}/assignments', 'trainer.assignments')->name('assignments');
@@ -195,6 +203,7 @@ Route::middleware(['auth', 'active', 'role:super-admin,academy-admin'])
         Route::livewire('dashboard', 'admin.dashboard')->name('dashboard');
         Route::livewire('programmes', 'admin.programmes')->name('programmes');
         Route::livewire('courses', 'admin.courses')->name('courses');
+        Route::livewire('courses/{course}/pricing', 'admin.variants')->name('course.pricing');
         Route::livewire('packages', 'admin.variants')->name('variants');
         Route::livewire('users', 'admin.users')->name('users');
         Route::livewire('orders', 'admin.orders')->name('orders');
@@ -202,6 +211,7 @@ Route::middleware(['auth', 'active', 'role:super-admin,academy-admin'])
         Route::livewire('materials', 'admin.materials')->name('materials');
         Route::livewire('reports', 'admin.reports')->name('reports');
         Route::livewire('integrations', 'admin.integrations')->name('integrations');
+        Route::livewire('settings/payment-gateway', 'admin.payment-gateway-settings')->name('settings.payment-gateway');
         Route::livewire('audit-logs', 'admin.audit-logs')->name('audit-logs');
         Route::livewire('certificates', 'admin.certificates')->name('certificates');
         Route::livewire('certificates/policy/{course}', 'admin.certificate-policy')->name('certificates.policy');

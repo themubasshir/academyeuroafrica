@@ -18,6 +18,8 @@ class QuizBuilder extends Component
 
     public ?int $passingScore = null;
 
+    public bool $isRequired = true;
+
     public string $releaseResults = 'after_close';
 
     public bool $randomiseQuestions = false;
@@ -46,6 +48,7 @@ class QuizBuilder extends Component
         $this->timeLimit = $this->quiz->time_limit_minutes;
         $this->maxAttempts = $this->quiz->max_attempts ?? 1;
         $this->passingScore = $this->quiz->passing_score;
+        $this->isRequired = $this->quiz->is_required ?? true;
         $this->releaseResults = $this->quiz->release_results ?? 'after_close';
         $this->randomiseQuestions = (bool) $this->quiz->randomise_questions;
         $this->randomiseOptions = (bool) $this->quiz->randomise_options;
@@ -58,10 +61,18 @@ class QuizBuilder extends Component
 
     public function saveSettings(): void
     {
+        $this->validate([
+            'timeLimit' => ['nullable', 'integer', 'min:1'],
+            'maxAttempts' => ['required', 'integer', 'min:1', 'max:100'],
+            'passingScore' => ['nullable', 'integer', 'min:0'],
+            'releaseResults' => ['required', 'in:immediate,after_close,manual'],
+            'isRequired' => ['boolean'],
+        ]);
         $this->quiz->update([
             'time_limit_minutes' => $this->timeLimit,
             'max_attempts' => max(1, $this->maxAttempts),
             'passing_score' => $this->passingScore,
+            'is_required' => $this->isRequired,
             'release_results' => $this->releaseResults,
             'randomise_questions' => $this->randomiseQuestions,
             'randomise_options' => $this->randomiseOptions,

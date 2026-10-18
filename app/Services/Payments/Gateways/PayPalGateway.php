@@ -5,6 +5,7 @@ namespace App\Services\Payments\Gateways;
 use App\Models\Order;
 use App\Services\Payments\Contracts\PaymentGateway;
 use App\Services\Payments\InvalidWebhookSignature;
+use App\Services\Payments\PayPalConfiguration;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -18,9 +19,8 @@ use RuntimeException;
  *   browser return → captureOrder() → server-side capture + fulfilment
  *   webhook        → verify via PayPal's verify-webhook-signature endpoint
  *
- * Credentials: PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET / PAYPAL_WEBHOOK_ID.
- * PAYPAL_MODE=sandbox uses api-m.sandbox.paypal.com; live uses api-m.paypal.com.
- * Sandbox credentials are never sent to the production base URL.
+ * Credentials are loaded from encrypted administrator settings, with separate
+ * environment-variable fallbacks for Sandbox and Live.
  */
 class PayPalGateway implements PaymentGateway
 {
@@ -30,6 +30,8 @@ class PayPalGateway implements PaymentGateway
 
     private ?string $accessToken = null;
 
+    public function __construct(private ?string $environmentOverride = null) {}
+
     public function name(): string
     {
         return 'paypal';
@@ -37,20 +39,22 @@ class PayPalGateway implements PaymentGateway
 
     public function isLive(): bool
     {
-        return config('services.paypal.mode') === 'live';
+        return $this->environmentName() === 'live';
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->configuration()->isEnabled();
     }
 
     public function isConfigured(): bool
     {
-        return in_array(config('services.paypal.mode'), ['sandbox', 'live'], true)
-            && filled(config('services.paypal.client_id'))
-            && filled(config('services.paypal.client_secret'))
-            && filled(config('services.paypal.webhook_id'));
+        return $this->configuration()->isConfigured($this->environmentName());
     }
 
     public function environment(): string
     {
-        return match (config('services.paypal.mode')) {
+        return match ($this->environmentName()) {
             'sandbox' => 'Sandbox',
             'live' => 'Live',
             default => 'Invalid configuration',
@@ -59,9 +63,18 @@ class PayPalGateway implements PaymentGateway
 
     public function baseUrl(): string
     {
-        return config('services.paypal.mode') === 'live'
+        return $this->environmentName() === 'live'
             ? self::LIVE
             : self::SANDBOX;
+    }
+
+    public function testConnection(): void
+    {
+        if (! $this->isConfigured()) {
+            throw new RuntimeException('PayPal configuration is incomplete.');
+        }
+
+        $this->accessToken();
     }
 
     /**
@@ -101,7 +114,7 @@ class PayPalGateway implements PaymentGateway
             ->post($this->baseUrl().'/v2/checkout/orders', $payload);
 
         if (! $response->successful()) {
-            throw new RuntimeException('PayPal order creation failed: '.$response->body());
+            throw new RuntimeException('PayPal order creation failed (HTTP '.$response->status().').');
         }
 
         $data = $response->json();
@@ -130,7 +143,7 @@ class PayPalGateway implements PaymentGateway
             ->post($this->baseUrl()."/v2/checkout/orders/{$paypalOrderId}/capture", (object) []);
 
         if (! $response->successful()) {
-            throw new RuntimeException('PayPal capture failed: '.$response->body());
+            throw new RuntimeException('PayPal capture failed (HTTP '.$response->status().').');
         }
 
         $data = $response->json();
@@ -155,7 +168,7 @@ class PayPalGateway implements PaymentGateway
     {
         $response = $this->authed()->get($this->baseUrl()."/v2/checkout/orders/{$paypalOrderId}");
         if (! $response->successful()) {
-            throw new RuntimeException('PayPal order lookup failed: '.$response->body());
+            throw new RuntimeException('PayPal order lookup failed (HTTP '.$response->status().').');
         }
 
         return $response->json();
@@ -177,7 +190,7 @@ class PayPalGateway implements PaymentGateway
             ]);
 
         if (! $response->successful()) {
-            throw new RuntimeException('PayPal refund failed: '.$response->body());
+            throw new RuntimeException('PayPal refund failed (HTTP '.$response->status().').');
         }
 
         return $response->json();
@@ -191,8 +204,8 @@ class PayPalGateway implements PaymentGateway
      */
     public function verifyWebhook(Request $request): array
     {
-        $webhookId = config('services.paypal.webhook_id')
-            ?: throw new RuntimeException('PAYPAL_WEBHOOK_ID not configured.');
+        $webhookId = $this->credentials()['webhook_id']
+            ?: throw new RuntimeException('PayPal webhook ID is not configured.');
 
         $headers = [
             'transmission_id' => $request->header('PAYPAL-TRANSMISSION-ID'),
@@ -226,17 +239,22 @@ class PayPalGateway implements PaymentGateway
         }
 
         $resource = $event['resource'] ?? [];
+        $relatedIds = $resource['supplementary_data']['related_ids'] ?? [];
+        $disputedTransaction = $resource['disputed_transactions'][0] ?? [];
         // For CAPTURE.* events the resource is the capture; the paypal order id
         // (our stored gateway_transaction_id) is under related_ids.order_id.
-        $paypalOrderId = $resource['supplementary_data']['related_ids']['order_id']
-            ?? $resource['id'] ?? null;
+        $paypalOrderId = $relatedIds['order_id'] ?? null;
+        $captureId = $relatedIds['capture_id']
+            ?? $disputedTransaction['seller_transaction_id']
+            ?? (str_starts_with((string) ($event['event_type'] ?? ''), 'PAYMENT.CAPTURE.') ? ($resource['id'] ?? null) : null);
 
         return [
             'event_id' => $event['id'],
             'type' => $event['event_type'] ?? '',
-            // capture id stored for refunds; gateway txn lookup uses order id
+            // Capture/provider ids support refund and dispute reconciliation.
             'transaction_id' => $paypalOrderId,
-            'capture_id' => $resource['id'] ?? null,
+            'capture_id' => $captureId,
+            'provider_resource_id' => $resource['id'] ?? null,
             'order_reference' => $resource['custom_id'] ?? $resource['custom'] ?? null,
             'payload' => $event,
         ];
@@ -287,10 +305,11 @@ class PayPalGateway implements PaymentGateway
             return $this->accessToken;
         }
 
-        $clientId = config('services.paypal.client_id')
-            ?: throw new RuntimeException('PAYPAL_CLIENT_ID not configured.');
-        $secret = config('services.paypal.client_secret')
-            ?: throw new RuntimeException('PAYPAL_CLIENT_SECRET not configured.');
+        $credentials = $this->credentials();
+        $clientId = $credentials['client_id']
+            ?: throw new RuntimeException('PayPal client ID is not configured.');
+        $secret = $credentials['client_secret']
+            ?: throw new RuntimeException('PayPal client secret is not configured.');
 
         $response = Http::asForm()
             ->withBasicAuth($clientId, $secret)
@@ -299,9 +318,30 @@ class PayPalGateway implements PaymentGateway
             ]);
 
         if (! $response->successful()) {
-            throw new RuntimeException('PayPal auth failed: '.$response->body());
+            throw new RuntimeException('PayPal authentication failed.');
         }
 
-        return $this->accessToken = $response->json('access_token');
+        $accessToken = $response->json('access_token');
+        if (! is_string($accessToken) || $accessToken === '') {
+            throw new RuntimeException('PayPal authentication response was invalid.');
+        }
+
+        return $this->accessToken = $accessToken;
+    }
+
+    /** @return array{client_id:?string, client_secret:?string, webhook_id:?string} */
+    private function credentials(): array
+    {
+        return $this->configuration()->credentials($this->environmentName());
+    }
+
+    private function environmentName(): string
+    {
+        return $this->environmentOverride ?? $this->configuration()->environment();
+    }
+
+    private function configuration(): PayPalConfiguration
+    {
+        return app(PayPalConfiguration::class);
     }
 }

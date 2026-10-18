@@ -19,8 +19,12 @@
             <section>
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="register-rule"><h2 class="register shrink-0">Modules &amp; lessons</h2></div>
-                    <form wire:submit="saveModule" class="flex gap-2">
+                    <form wire:submit="saveModule" class="flex flex-wrap gap-2">
                         <input wire:model="moduleTitle" placeholder="New module title" aria-label="New module title" class="input w-56">
+                        <select wire:model="moduleStatus" aria-label="Module status" class="input w-36">
+                            <option value="draft">Draft</option>
+                            <option value="published">Published</option>
+                        </select>
                         <button class="btn-primary btn-sm">+ Module</button>
                     </form>
                 </div>
@@ -29,7 +33,7 @@
                     @forelse ($modules as $module)
                         <div class="card overflow-hidden">
                             <div class="flex items-center justify-between border-b border-paper-200 bg-paper-50 px-4 py-2.5">
-                                <span class="text-sm font-semibold text-ink-900">{{ $module->title }}</span>
+                                <span class="text-sm font-semibold text-ink-900">{{ $module->title }} <span class="ml-2 text-xs font-normal text-ink-500">{{ ucfirst($module->status) }}</span></span>
                                 <span class="flex items-center gap-1">
                                     <button wire:click="moveModule({{ $module->id }}, 'up')" class="flex h-11 w-11 items-center justify-center rounded-md text-ink-500 transition hover:bg-paper-100 hover:text-ink-900" aria-label="Move module up">↑</button>
                                     <button wire:click="moveModule({{ $module->id }}, 'down')" class="flex h-11 w-11 items-center justify-center rounded-md text-ink-500 transition hover:bg-paper-100 hover:text-ink-900" aria-label="Move module down">↓</button>
@@ -40,10 +44,16 @@
                             <ul class="divide-y divide-paper-200">
                                 @foreach ($module->lessons as $lesson)
                                     <li class="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-                                        <span class="min-w-0 truncate text-ink-800">{{ $lesson->title }} <span class="text-xs text-ink-600">({{ $lesson->type }})</span></span>
-                                        <span class="flex shrink-0 gap-3 text-sm">
+                                        <span class="min-w-0 truncate text-ink-800">
+                                            {{ $lesson->title }}
+                                            <span class="text-xs text-ink-600">· {{ str_replace('_', ' ', $lesson->type) }} · {{ $lesson->is_required ? 'required' : 'optional' }} · {{ $lesson->status }}</span>
+                                        </span>
+                                        <span class="flex shrink-0 items-center gap-2 text-sm">
+                                            <button wire:click="moveLesson({{ $lesson->id }}, 'up')" class="flex h-9 w-9 items-center justify-center rounded text-ink-500 hover:bg-paper-100" aria-label="Move lesson up">↑</button>
+                                            <button wire:click="moveLesson({{ $lesson->id }}, 'down')" class="flex h-9 w-9 items-center justify-center rounded text-ink-500 hover:bg-paper-100" aria-label="Move lesson down">↓</button>
+                                            <a href="{{ route('trainer.lesson.preview', [$course, $lesson]) }}" class="font-medium text-ink-600 hover:underline">Preview</a>
                                             <button wire:click="editLesson({{ $lesson->id }}, {{ $module->id }})" class="font-medium text-reg-700 hover:underline">Edit</button>
-                                            <button wire:click="deleteLesson({{ $lesson->id }})" class="font-medium text-red-700 hover:underline">Delete</button>
+                                            <button wire:click="deleteLesson({{ $lesson->id }})" wire:confirm="Delete this lesson and its progress?" class="font-medium text-red-700 hover:underline">Delete</button>
                                         </span>
                                     </li>
                                 @endforeach
@@ -55,22 +65,54 @@
                 </div>
             </section>
 
-            @if ($attachModuleId)
+            @if ($lessonModuleId)
                 <section class="rounded-lg border border-reg-100 bg-reg-50/60 p-5">
                     <h3 class="h3">{{ $editingLessonId ? 'Edit lesson' : 'New lesson' }}</h3>
                     <div class="mt-3 space-y-3">
                         <input wire:model="lessonTitle" placeholder="Lesson title" aria-label="Lesson title" class="input">
+                        <select wire:model="lessonModuleId" aria-label="Lesson module" class="input">
+                            @foreach ($modules as $module)<option value="{{ $module->id }}">{{ $module->title }}</option>@endforeach
+                        </select>
                         <select wire:model.live="lessonType" aria-label="Lesson type" class="input">
                             <option value="text">Text</option>
+                            <option value="rich_text">Rich text</option>
+                            <option value="pdf">PDF document</option>
                             <option value="video">Video</option>
                         </select>
                         @if ($lessonType === 'video')
-                            <input wire:model="videoId" placeholder="Video ID (YouTube/Vimeo/embed URL)" aria-label="Video ID" class="input">
+                            <select wire:model.live="videoSource" aria-label="Video source" class="input">
+                                <option value="hosted">Approved YouTube or Vimeo</option>
+                                <option value="upload">Private uploaded video</option>
+                            </select>
+                            @if ($videoSource === 'hosted')
+                                <input wire:model="videoId" placeholder="YouTube/Vimeo ID or URL" aria-label="Video ID or URL" class="input">
+                            @else
+                                <input type="file" wire:model="lessonUpload" accept="video/mp4,video/webm" aria-label="Upload lesson video" class="block w-full text-sm text-ink-600">
+                                <p class="text-xs text-ink-500">MP4 or WebM, up to 512 MB. The hosting PHP upload limit may be lower.</p>
+                            @endif
+                            <input type="number" wire:model="videoDurationSeconds" min="1" max="86400" placeholder="Video duration in seconds" aria-label="Video duration in seconds" class="input">
+                        @elseif ($lessonType === 'pdf')
+                            <input type="file" wire:model="lessonUpload" accept="application/pdf" aria-label="Upload primary PDF" class="block w-full text-sm text-ink-600">
+                            <p class="text-xs text-ink-500">The PDF is shown inside the lesson. Opening it does not mark the lesson complete.</p>
                         @endif
-                        <textarea wire:model="lessonContent" rows="4" placeholder="Content" aria-label="Lesson content" class="input"></textarea>
+                        <textarea wire:model="lessonContent" rows="5" placeholder="Lesson text or supported HTML formatting" aria-label="Lesson content" class="input"></textarea>
+                        <div class="grid gap-3 sm:grid-cols-3">
+                            <select wire:model="lessonStatus" aria-label="Lesson status" class="input">
+                                <option value="draft">Draft</option>
+                                <option value="published">Published</option>
+                            </select>
+                            <label class="flex min-h-11 items-center gap-2 text-sm text-ink-700">
+                                <input type="checkbox" wire:model="lessonRequired" class="rounded text-reg-600"> Required for certificate
+                            </label>
+                            <label class="block text-sm text-ink-700">
+                                <span class="label">Video completion %</span>
+                                <input type="number" wire:model="completionThreshold" min="1" max="100" class="input mt-1">
+                            </label>
+                        </div>
+                        @error('lessonUpload')<p class="text-sm text-red-700">{{ $message }}</p>@enderror
                         <div class="flex gap-2">
                             <button wire:click="saveLesson" class="btn-primary">Save lesson</button>
-                            <button wire:click="$set('attachModuleId', null)" class="btn-ghost">Cancel</button>
+                            <button wire:click="$set('lessonModuleId', null)" class="btn-ghost">Cancel</button>
                         </div>
                     </div>
                 </section>

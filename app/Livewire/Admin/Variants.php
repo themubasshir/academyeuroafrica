@@ -17,6 +17,13 @@ class Variants extends Component
     /** Inline-edit buffer keyed by variant id. */
     public array $draft = [];
 
+    public ?int $courseFilter = null;
+
+    public function mount(?int $course = null): void
+    {
+        $this->courseFilter = $course;
+    }
+
     public function edit(int $id): void
     {
         $v = CourseVariant::findOrFail($id);
@@ -24,6 +31,9 @@ class Variants extends Component
             'name' => $v->name,
             'price' => $v->price_cents !== null ? number_format($v->price_cents / 100, 2, '.', '') : '',
             'duration' => $v->duration ?? '',
+            'expiry_policy' => $v->expiry_policy ?? 'none',
+            'access_duration_days' => $v->access_duration_days,
+            'fixed_expiry_at' => $v->fixed_expiry_at?->format('Y-m-d\\TH:i'),
         ];
     }
 
@@ -33,12 +43,18 @@ class Variants extends Component
             "draft.{$id}.name" => 'required|string|max:255',
             "draft.{$id}.price" => 'nullable|numeric|min:0',
             "draft.{$id}.duration" => 'nullable|string|max:120',
+            "draft.{$id}.expiry_policy" => 'required|in:none,duration,fixed',
+            "draft.{$id}.access_duration_days" => 'nullable|integer|min:1|max:3650',
+            "draft.{$id}.fixed_expiry_at" => 'nullable|date|after:now',
         ])['draft'][$id];
 
         CourseVariant::findOrFail($id)->update([
             'name' => $data['name'],
             'price_cents' => $data['price'] === '' ? null : (int) round($data['price'] * 100),
             'duration' => $data['duration'] ?: null,
+            'expiry_policy' => $data['expiry_policy'],
+            'access_duration_days' => $data['expiry_policy'] === 'duration' ? $data['access_duration_days'] : null,
+            'fixed_expiry_at' => $data['expiry_policy'] === 'fixed' ? $data['fixed_expiry_at'] : null,
         ]);
         unset($this->draft[$id]);
     }
@@ -47,7 +63,7 @@ class Variants extends Component
     public function approve(int $id): void
     {
         $v = CourseVariant::findOrFail($id);
-        abort_if($v->price_cents === null, 422, 'Set a price before approving.');
+        abort_if($v->availability === 'quote' || $v->price_cents === null, 422, 'Set a paid price before approving.');
         $v->update(['approval_status' => 'approved']);
     }
 
@@ -63,7 +79,7 @@ class Variants extends Component
     {
         $v = CourseVariant::findOrFail($id);
         if ($v->status !== 'published') {
-            abort_unless($v->approval_status === 'approved' && $v->price_cents !== null, 422,
+            abort_unless($v->approval_status === 'approved' && $v->availability === 'paid' && $v->price_cents !== null, 422,
                 'Approve with a price before publishing.');
             $v->update(['status' => 'published']);
         } else {
@@ -75,7 +91,8 @@ class Variants extends Component
     {
         return view('livewire.admin.variants', [
             'variants' => CourseVariant::with('course.programme')
-                ->orderBy('course_id')->orderBy('price_cents')->get(),
+                ->when($this->courseFilter, fn ($query) => $query->where('course_id', $this->courseFilter))
+                ->orderBy('course_id')->orderBy('display_order')->orderBy('price_cents')->get(),
         ])->layout('layouts::app', ['title' => 'Course Packages']);
     }
 }

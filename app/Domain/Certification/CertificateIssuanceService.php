@@ -39,6 +39,12 @@ class CertificateIssuanceService
             return ['status' => 'inactive_enrolment', 'checks' => [], 'percent' => null];
         }
 
+        if (! $force && Certificate::where('enrolment_id', $enrolment->id)
+            ->whereIn('status', ['revoked', 'superseded'])
+            ->exists()) {
+            return ['status' => 'inactive_certificate', 'checks' => [], 'percent' => null];
+        }
+
         $result = $this->eligibility->evaluate($enrolment);
 
         if ($result['status'] === 'disabled') {

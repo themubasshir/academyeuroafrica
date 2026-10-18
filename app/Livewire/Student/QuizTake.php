@@ -22,6 +22,7 @@ class QuizTake extends Component
     public function mount(Enrolment $enrolment, Quiz $quiz): void
     {
         $this->authorize('view', $enrolment);
+        abort_unless($enrolment->isActive(), 403, 'This enrolment has expired.');
         abort_unless($quiz->course_id === $enrolment->variant->course_id, 404);
         abort_unless($quiz->status === 'published', 404);
 

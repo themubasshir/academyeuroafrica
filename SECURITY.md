@@ -14,11 +14,13 @@
 - Server-side totals from `course_variants`. Browser return/cancel never grants access — only a verified capture or verified webhook does.
 - `payment_events(gateway, gateway_event_id)` unique → idempotent fulfilment; `enrolments(user,variant)` unique → no duplicate access.
 - Webhook authenticity via PayPal `verify-webhook-signature` (never HMAC-with-secret). Capture integrity checked: status COMPLETED, amount, currency, order reference, capture id.
-- `PayPal-Request-Id` idempotency on order create/capture/refund. Refunds require an accepted provider status before persistence; completed full refunds suspend only enrolments linked to that order. Partial refunds preserve access by policy. `PAYPAL_CLIENT_SECRET` server-side only, never in browser or bundle.
-- Sandbox credentials can never reach the live base URL (mode selects the host). PayPal Live is selected only by explicit `PAYPAL_MODE=live`; invalid or incomplete configuration fails closed.
+- `PayPal-Request-Id` idempotency on order create/capture/refund. Refunds require an accepted provider status before persistence; completed full refunds suspend only enrolments linked to that order. Partial refunds preserve access by policy. Client secrets remain server-side and never enter browser payloads or bundles.
+- Sandbox and Live credentials are encrypted separately with Laravel's application encryption. Saved values are never hydrated into the administrator form or written to audit payloads. The active environment changes only through an explicit administrator save; invalid or incomplete configuration fails closed.
 
 ## Files
 - Uploads → private disk, randomised names, MIME+size validation. Served only via controller after auth check. Never placed under public web root; PHP execution impossible.
+- Primary lesson PDFs and MP4/WebM videos use the same private disk. Inline PDF and byte-range video endpoints recheck active enrolment or staff assignment on every request and send `nosniff`; opening a PDF never records completion.
+- Hosted lesson video embeds accept only YouTube and Vimeo identifiers/hosts. Rich lesson HTML is restricted to a small formatting allowlist with attributes removed.
 
 ## Transport & headers
 - HTTPS only in prod (`SESSION_SECURE_COOKIE`, force HTTPS via host). Add CSP/X-Frame-Options/Referrer-Policy in Phase 8.

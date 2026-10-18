@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['user_id', 'course_variant_id', 'order_id', 'source', 'grant_reason', 'status', 'enrolled_at', 'expires_at'])]
+#[Fillable(['user_id', 'course_variant_id', 'order_id', 'source', 'grant_reason', 'status', 'enrolled_at', 'activated_at', 'entitlement_started_at', 'entitlement_ended_at', 'expires_at'])]
 class Enrolment extends Model
 {
     use HasFactory;
@@ -24,6 +24,12 @@ class Enrolment extends Model
     public function variant(): BelongsTo
     {
         return $this->belongsTo(CourseVariant::class, 'course_variant_id');
+    }
+
+    /** @return BelongsTo<Order, $this> */
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 
     /** @return HasMany<LessonProgress, $this> */
@@ -44,13 +50,23 @@ class Enrolment extends Model
             return false;
         }
 
-        return $this->expires_at === null || $this->expires_at->isFuture();
+        $expiry = $this->entitlement_ended_at ?? $this->expires_at;
+
+        return $expiry === null || $expiry->isFuture();
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->status === 'active' && ! $this->isActive();
     }
 
     protected function casts(): array
     {
         return [
             'enrolled_at' => 'datetime',
+            'activated_at' => 'datetime',
+            'entitlement_started_at' => 'datetime',
+            'entitlement_ended_at' => 'datetime',
             'expires_at' => 'datetime',
         ];
     }

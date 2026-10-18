@@ -57,10 +57,14 @@ Do **not** run `config:cache` locally — it bakes local env into the artefact. 
    QUEUE_CONNECTION=database
    CACHE_STORE=database
    PAYMENT_GATEWAY=paypal
+   PAYPAL_ENABLED=false
    PAYPAL_MODE=sandbox
-   PAYPAL_CLIENT_ID=<sandbox id>
-   PAYPAL_CLIENT_SECRET=<sandbox secret>
-   PAYPAL_WEBHOOK_ID=<sandbox webhook>
+   PAYPAL_SANDBOX_CLIENT_ID=<sandbox id>
+   PAYPAL_SANDBOX_CLIENT_SECRET=<sandbox secret>
+   PAYPAL_SANDBOX_WEBHOOK_ID=<sandbox webhook>
+   PAYPAL_LIVE_CLIENT_ID=
+   PAYPAL_LIVE_CLIENT_SECRET=
+   PAYPAL_LIVE_WEBHOOK_ID=
    PAYPAL_CURRENCY=EUR
    PAYPAL_BRAND_NAME="EAMN Academy"
    JOOMLA_BASE_URL=https://euroafricamedia.eu
@@ -222,7 +226,7 @@ public registration (or a second provisioned account).
 
 ## Remaining blockers before go-live
 
-- **Real PayPal credentials**: `PAYPAL_CLIENT_ID`/`SECRET`/`WEBHOOK_ID` unset and
+- **Real PayPal credentials**: configure encrypted Sandbox and Live values in Admin → Payment gateway (or their environment-specific fallbacks) and
   no reachable webhook in sandbox → checkout/capture/refund/webhook unverified.
   Keep `PAYPAL_MODE=sandbox` and all variants unpublished.
 - **Email**: SMTP mailbox credentials not yet provided; registration
@@ -304,7 +308,7 @@ Re-run with `--rotate` (CLI/schedule) to reset a locked-out admin.
 
 ## Secrets & gateway safety
 - Test gateway gated to `local`/`testing` env — routes not registered on prod.
-- `PAYPAL_MODE=sandbox` until live cutover; live creds + live `PAYPAL_WEBHOOK_ID` required for live.
+- `PAYPAL_ENABLED=false` and `PAYPAL_MODE=sandbox` until approved cutover; separate Live credentials and Live Webhook ID are required for Live.
 - No `.env`, `.git`, tests, `DemoSeeder`, or local DB ship in either archive.
 
 ## Backup & rollback

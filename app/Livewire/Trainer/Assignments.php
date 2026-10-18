@@ -20,6 +20,20 @@ class Assignments extends Component
 
     public int $maxPoints = 100;
 
+    public bool $isRequired = true;
+
+    public string $evaluationType = 'numeric';
+
+    public int $passingScore = 50;
+
+    public bool $allowResubmission = true;
+
+    public int $maxSubmissions = 2;
+
+    public bool $allowLateSubmissions = false;
+
+    public string $status = 'draft';
+
     public string $audience = 'course';
 
     public ?int $groupId = null;
@@ -37,6 +51,13 @@ class Assignments extends Component
             'title' => 'required|string|max:255',
             'dueAt' => 'nullable|date',
             'maxPoints' => 'required|integer|min:1',
+            'isRequired' => 'boolean',
+            'evaluationType' => 'required|in:numeric,pass_fail',
+            'passingScore' => 'required_if:evaluationType,numeric|integer|min:0|max:100',
+            'allowResubmission' => 'boolean',
+            'maxSubmissions' => 'required|integer|min:1|max:20',
+            'allowLateSubmissions' => 'boolean',
+            'status' => 'required|in:draft,published',
             'audience' => 'required|in:course,group,students',
         ]);
 
@@ -47,9 +68,15 @@ class Assignments extends Component
             'instructions' => $this->instructions,
             'due_at' => $this->dueAt ? Carbon::parse($this->dueAt, auth()->user()->timezone ?? 'UTC')->utc() : null,
             'max_points' => $this->maxPoints,
+            'is_required' => $this->isRequired,
+            'evaluation_type' => $this->evaluationType,
+            'passing_score' => $this->evaluationType === 'numeric' ? $this->passingScore : null,
+            'allow_resubmission' => $this->allowResubmission,
+            'max_submissions' => $this->maxSubmissions,
+            'allow_late_submissions' => $this->allowLateSubmissions,
             'audience' => $this->audience,
             'group_id' => $this->audience === 'group' ? $this->groupId : null,
-            'status' => 'published',
+            'status' => $this->status,
         ]);
 
         if ($this->audience === 'students') {

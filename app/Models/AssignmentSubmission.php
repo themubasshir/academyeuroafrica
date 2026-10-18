@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['assignment_id', 'user_id', 'body', 'submitted_at', 'status'])]
+#[Fillable(['assignment_id', 'user_id', 'attempt_no', 'body', 'submitted_at', 'status'])]
 class AssignmentSubmission extends Model
 {
     use HasFactory;

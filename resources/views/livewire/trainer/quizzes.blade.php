@@ -15,7 +15,7 @@
             <div class="flex items-center justify-between card p-4">
                 <div>
                     <p class="font-medium text-sm">{{ $quiz->title }}</p>
-                    <p class="text-xs text-ink-500">{{ $quiz->questions_count }} questions · {{ $quiz->attempts_count }} attempts · {{ ucfirst($quiz->status) }}</p>
+                    <p class="text-xs text-ink-500">{{ $quiz->questions_count }} questions · {{ $quiz->attempts_count }} attempts · {{ ucfirst($quiz->status) }} · {{ $quiz->is_required ? 'Required' : 'Optional' }}</p>
                 </div>
                 <div class="flex gap-3 text-sm">
                     <a href="{{ route('trainer.quiz.builder', $quiz) }}" class="link">Edit</a>

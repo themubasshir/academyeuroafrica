@@ -18,7 +18,7 @@
                 <input type="number" wire:model="timeLimit" min="1" class="input mt-1"></label>
             <label class="text-sm">Max attempts
                 <input type="number" wire:model="maxAttempts" min="1" class="input mt-1"></label>
-            <label class="text-sm">Passing score
+            <label class="text-sm">Passing score (points)
                 <input type="number" wire:model="passingScore" min="0" class="input mt-1"></label>
             <label class="text-sm">Release results
                 <select wire:model="releaseResults" class="input mt-1">
@@ -28,6 +28,7 @@
                 </select></label>
             <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="randomiseQuestions" class="rounded"> Randomise questions</label>
             <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="randomiseOptions" class="rounded"> Randomise options</label>
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="isRequired" class="rounded"> Required for certificate</label>
         </div>
         <button wire:click="saveSettings" class="mt-4 btn-primary">Save settings</button>
     </section>

@@ -27,6 +27,10 @@ class FileService
 
     public const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 
+    public const VIDEO_MIME = ['video/mp4', 'video/webm'];
+
+    public const MAX_VIDEO_BYTES = 512 * 1024 * 1024; // 512 MB; host PHP limits may be lower
+
     /** Store an upload as a Material attached to a model. */
     public function storeMaterial(UploadedFile $file, User $uploader, $attachable, string $visibility = 'enrolled'): Material
     {
@@ -49,6 +53,56 @@ class FileService
             'size_bytes' => $file->getSize(),
             'visibility' => $visibility,
         ]);
+    }
+
+    /** Store a PDF or uploaded video used as the primary body of a lesson. */
+    public function storeLessonContent(UploadedFile $file, User $uploader, $lesson, string $type): Material
+    {
+        $mime = (string) $file->getMimeType();
+        $allowed = $type === 'pdf' ? ['application/pdf'] : self::VIDEO_MIME;
+        $maximum = $type === 'pdf' ? self::MAX_BYTES : self::MAX_VIDEO_BYTES;
+
+        abort_unless(in_array($mime, $allowed, true), 422, 'The uploaded file does not match the lesson type.');
+        abort_if($file->getSize() > $maximum, 422, 'File too large.');
+
+        $directory = $type === 'pdf' ? 'materials' : 'lesson-videos';
+        $extension = $file->guessExtension() ?: ($type === 'pdf' ? 'pdf' : 'mp4');
+        $path = $directory.'/'.Str::random(40).'.'.$extension;
+        Storage::disk('local')->put($path, $file->getContent());
+
+        return Material::create([
+            'uploader_id' => $uploader->id,
+            'attachable_type' => $lesson->getMorphClass(),
+            'attachable_id' => $lesson->getKey(),
+            'disk' => 'local',
+            'path' => $path,
+            'original_name' => $file->getClientOriginalName(),
+            'mime' => $mime,
+            'size_bytes' => $file->getSize(),
+            'visibility' => 'enrolled',
+        ]);
+    }
+
+    /** Replace a stored material after applying the same MIME and size policy. */
+    public function replaceMaterial(Material $material, UploadedFile $file): Material
+    {
+        $mime = (string) $file->getMimeType();
+        $isVideo = in_array($mime, self::VIDEO_MIME, true);
+        abort_unless($isVideo || in_array($mime, self::ALLOWED_MIME, true), 422, 'File type not allowed.');
+        abort_if($file->getSize() > ($isVideo ? self::MAX_VIDEO_BYTES : self::MAX_BYTES), 422, 'File too large.');
+
+        $directory = $isVideo ? 'lesson-videos' : 'materials';
+        $path = $directory.'/'.Str::random(40).'.'.($file->guessExtension() ?: 'bin');
+        Storage::disk($material->disk)->put($path, $file->getContent());
+        Storage::disk($material->disk)->delete($material->path);
+        $material->forceFill([
+            'path' => $path,
+            'mime' => $mime,
+            'size_bytes' => $file->getSize(),
+            'original_name' => $file->getClientOriginalName(),
+        ])->save();
+
+        return $material->fresh();
     }
 
     /** Stream an authorised download (caller must authorise first). */

@@ -8,6 +8,7 @@ use App\Models\CourseVariant;
 use App\Models\Enrolment;
 use App\Models\Order;
 use App\Models\PaymentEvent;
+use App\Models\PaymentGatewaySetting;
 use App\Models\PaymentTransaction;
 use App\Models\User;
 use App\Services\Payments\Gateways\PayPalGateway;
@@ -36,6 +37,7 @@ class PayPalGatewayTest extends TestCase
     {
         parent::setUp();
 
+        config()->set('services.paypal.enabled', true);
         config()->set('services.paypal.mode', 'sandbox');
         config()->set('services.paypal.client_id', 'sb-client');
         config()->set('services.paypal.client_secret', 'sb-secret');
@@ -255,6 +257,57 @@ class PayPalGatewayTest extends TestCase
         $this->gateway->verifyWebhook($this->webhookRequest(['id' => 'WH-1'], withHeaders: false));
     }
 
+    public function test_webhook_verification_uses_the_active_environments_webhook_id(): void
+    {
+        PaymentGatewaySetting::create([
+            'gateway' => 'paypal',
+            'enabled' => true,
+            'environment' => 'live',
+            'sandbox_client_id' => 'sandbox-client',
+            'sandbox_client_secret' => 'sandbox-secret',
+            'sandbox_webhook_id' => 'WH-SANDBOX',
+            'live_client_id' => 'live-client',
+            'live_client_secret' => 'live-secret',
+            'live_webhook_id' => 'WH-LIVE',
+        ]);
+        Http::fake([
+            'https://api-m.paypal.com/v1/oauth2/token' => Http::response(['access_token' => 'live-token']),
+            'https://api-m.paypal.com/v1/notifications/verify-webhook-signature' => Http::response(['verification_status' => 'SUCCESS']),
+        ]);
+        $request = Request::create('/webhooks/paypal', 'POST', [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+        ], json_encode(['id' => 'WH-LIVE-EVENT', 'event_type' => 'PAYMENT.CAPTURE.PENDING', 'resource' => []]));
+        foreach ([
+            'PAYPAL-TRANSMISSION-ID' => 'transmission-id',
+            'PAYPAL-TRANSMISSION-TIME' => '2026-10-18T12:00:00Z',
+            'PAYPAL-CERT-URL' => 'https://api.paypal.com/cert.pem',
+            'PAYPAL-AUTH-ALGO' => 'SHA256withRSA',
+            'PAYPAL-TRANSMISSION-SIG' => 'signature',
+        ] as $header => $value) {
+            $request->headers->set($header, $value);
+        }
+
+        (new PayPalGateway)->verifyWebhook($request);
+
+        Http::assertSent(fn ($sentRequest) => str_contains($sentRequest->url(), '/verify-webhook-signature')
+            && $sentRequest['webhook_id'] === 'WH-LIVE');
+        Http::assertNotSent(fn ($sentRequest) => str_contains($sentRequest->url(), 'sandbox.paypal.com'));
+    }
+
+    public function test_missing_active_environment_webhook_id_is_rejected(): void
+    {
+        PaymentGatewaySetting::create([
+            'gateway' => 'paypal',
+            'enabled' => true,
+            'environment' => 'live',
+            'live_client_id' => 'live-client',
+            'live_client_secret' => 'live-secret',
+        ]);
+
+        $this->expectException(\RuntimeException::class);
+        (new PayPalGateway)->verifyWebhook($this->webhookRequest(['id' => 'WH-1']));
+    }
+
     public function test_repeated_webhook_event_idempotent(): void
     {
         $this->seedTransaction();
@@ -329,6 +382,7 @@ class PayPalGatewayTest extends TestCase
 
     public function test_default_gateway_is_paypal(): void
     {
+        config()->set('services.paypal.enabled', true);
         $this->assertSame('paypal', config('services.payments.default'));
         $this->assertInstanceOf(PayPalGateway::class, app(PaymentManager::class)->driver());
     }

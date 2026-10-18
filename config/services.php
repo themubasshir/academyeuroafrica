@@ -41,7 +41,19 @@ return [
 
     'paypal' => [
         // sandbox → api-m.sandbox.paypal.com ; live → api-m.paypal.com
+        'enabled' => env('PAYPAL_ENABLED', false),
         'mode' => env('PAYPAL_MODE', 'sandbox'),
+        'sandbox' => [
+            'client_id' => env('PAYPAL_SANDBOX_CLIENT_ID'),
+            'client_secret' => env('PAYPAL_SANDBOX_CLIENT_SECRET'),
+            'webhook_id' => env('PAYPAL_SANDBOX_WEBHOOK_ID'),
+        ],
+        'live' => [
+            'client_id' => env('PAYPAL_LIVE_CLIENT_ID'),
+            'client_secret' => env('PAYPAL_LIVE_CLIENT_SECRET'),
+            'webhook_id' => env('PAYPAL_LIVE_WEBHOOK_ID'),
+        ],
+        // Legacy single-environment variables remain supported for upgrades.
         'client_id' => env('PAYPAL_CLIENT_ID'),
         'client_secret' => env('PAYPAL_CLIENT_SECRET'),
         'webhook_id' => env('PAYPAL_WEBHOOK_ID'),

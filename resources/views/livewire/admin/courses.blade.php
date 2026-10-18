@@ -20,9 +20,49 @@
 
     <div class="ledger">
         @forelse ($courses as $course)
-            <div class="ledger-row">
-                <div class="min-w-0"><p class="truncate font-semibold">{{ $course->title }}</p><p class="text-xs text-ink-500">{{ $course->programme->name }} · {{ $course->variants->count() }} variants · {{ ucfirst($course->status) }}</p></div>
-                <div class="flex shrink-0 gap-3 text-sm font-medium"><a href="{{ route('trainer.course.manage', $course) }}" class="text-reg-700 hover:underline">Curriculum</a><button wire:click="edit({{ $course->id }})" class="text-reg-700 hover:underline">Edit</button>@if ($course->status !== 'archived')<button wire:click="archive({{ $course->id }})" wire:confirm="Archive this course? Existing learning records are retained." class="text-red-700 hover:underline">Archive</button>@endif</div>
+            @php
+                $checkoutUrl = route('checkout.course', ['course' => $course->slug]);
+                $checkoutAvailable = $course->checkoutVariant?->isPurchasable() ?? false;
+            @endphp
+            <div class="ledger-row flex-col items-start sm:flex-row">
+                <div class="min-w-0 flex-1">
+                    <p class="truncate font-semibold">{{ $course->title }}</p>
+                    <p class="text-xs text-ink-500">{{ $course->programme->name }} · {{ $course->variants->count() }} packages · {{ ucfirst($course->status) }}</p>
+                    <div class="mt-3 flex flex-wrap items-center gap-2">
+                        <label for="checkout-package-{{ $course->id }}" class="sr-only">Checkout package for {{ $course->title }}</label>
+                        <select id="checkout-package-{{ $course->id }}"
+                                wire:change="assignCheckoutPackage({{ $course->id }}, $event.target.value)"
+                                class="input w-full min-w-0 py-2 text-xs sm:w-auto sm:min-w-52">
+                            <option value="">No checkout package</option>
+                            @foreach ($course->variants as $variant)
+                                @php
+                                    $packageReady = $variant->availability === 'paid'
+                                        && $variant->status === 'published'
+                                        && $variant->approval_status === 'approved'
+                                        && $variant->price_cents !== null;
+                                @endphp
+                                <option value="{{ $variant->id }}"
+                                        @selected($course->checkout_variant_id === $variant->id)
+                                        @disabled(! $packageReady)>
+                                    {{ $variant->name }} · {{ $variant->priceFormatted() }}{{ $packageReady ? '' : ' · unavailable' }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        @if ($checkoutAvailable)
+                            <div x-data="{ copied: false, url: @js($checkoutUrl) }">
+                                <button type="button"
+                                        class="btn-secondary btn-sm"
+                                        x-on:click="navigator.clipboard.writeText(url).then(() => { copied = true; setTimeout(() => copied = false, 1800) })">
+                                    <span x-text="copied ? 'Link copied' : 'Copy Checkout Link'">Copy Checkout Link</span>
+                                </button>
+                            </div>
+                        @elseif ($course->checkout_variant_id)
+                            <span class="text-xs text-amber-700">Publish the course and selected package to activate its link.</span>
+                        @endif
+                    </div>
+                </div>
+                <div class="flex w-full shrink-0 flex-wrap gap-3 text-sm font-medium sm:w-auto sm:justify-end"><a href="{{ route('admin.course.pricing', $course) }}" class="text-reg-700 hover:underline">Manage Pricing & Access</a><a href="{{ route('trainer.course.manage', $course) }}" class="text-reg-700 hover:underline">Curriculum</a><button wire:click="edit({{ $course->id }})" class="text-reg-700 hover:underline">Edit</button>@if ($course->status !== 'archived')<button wire:click="archive({{ $course->id }})" wire:confirm="Archive this course? Existing learning records are retained." class="text-red-700 hover:underline">Archive</button>@endif</div>
             </div>
         @empty
             <x-ui.empty title="No courses" />

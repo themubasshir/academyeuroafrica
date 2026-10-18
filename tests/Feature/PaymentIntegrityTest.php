@@ -45,6 +45,7 @@ class PaymentIntegrityTest extends TestCase
 
     public function test_missing_paypal_configuration_is_rejected_before_http(): void
     {
+        config()->set('services.paypal.enabled', true);
         config()->set('services.paypal.mode', 'sandbox');
         config()->set('services.paypal.client_id', null);
         config()->set('services.paypal.client_secret', null);
@@ -56,8 +57,23 @@ class PaymentIntegrityTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_paypal_is_rejected_while_disabled_even_when_credentials_exist(): void
+    {
+        config()->set('services.paypal.enabled', false);
+        config()->set('services.paypal.mode', 'sandbox');
+        config()->set('services.paypal.client_id', 'client');
+        config()->set('services.paypal.client_secret', 'secret');
+        config()->set('services.paypal.webhook_id', 'webhook');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('PayPal is disabled.');
+
+        app(PaymentManager::class)->driver('paypal');
+    }
+
     public function test_full_refund_suspends_only_order_entitlements(): void
     {
+        config()->set('services.paypal.enabled', true);
         config()->set('services.paypal.mode', 'sandbox');
         config()->set('services.paypal.client_id', 'client');
         config()->set('services.paypal.client_secret', 'secret');

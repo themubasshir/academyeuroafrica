@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-#[Fillable(['course_module_id', 'title', 'content', 'type', 'sort_order', 'source_key', 'status', 'requires_previous'])]
+#[Fillable(['course_module_id', 'title', 'content', 'type', 'sort_order', 'source_key', 'status', 'requires_previous', 'is_required', 'completion_threshold', 'primary_material_id'])]
 class Lesson extends Model
 {
     use HasFactory;
@@ -26,6 +26,12 @@ class Lesson extends Model
         return $this->hasOne(CourseVideo::class);
     }
 
+    /** @return BelongsTo<Material, $this> */
+    public function primaryMaterial(): BelongsTo
+    {
+        return $this->belongsTo(Material::class, 'primary_material_id');
+    }
+
     /** @return MorphMany<Material, $this> */
     public function materials(): MorphMany
     {
@@ -37,8 +43,19 @@ class Lesson extends Model
         return $this->status === 'published';
     }
 
+    public function sanitisedContent(): string
+    {
+        $content = strip_tags((string) $this->content, '<p><br><strong><em><ul><ol><li><h2><h3><blockquote><code>');
+
+        return (string) preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', $content);
+    }
+
     protected function casts(): array
     {
-        return ['requires_previous' => 'boolean'];
+        return [
+            'requires_previous' => 'boolean',
+            'is_required' => 'boolean',
+            'completion_threshold' => 'integer',
+        ];
     }
 }

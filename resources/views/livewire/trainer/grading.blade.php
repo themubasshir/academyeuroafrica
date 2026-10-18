@@ -14,7 +14,7 @@
                 <div class="flex items-start justify-between">
                     <div>
                         <p class="font-medium">{{ $sub->user->name }}</p>
-                        <p class="text-xs text-ink-500">{{ ucfirst($sub->status) }} · submitted {{ $sub->submitted_at?->diffForHumans() }}</p>
+                        <p class="text-xs text-ink-500">Attempt {{ $sub->attempt_no }} · {{ ucfirst($sub->status) }} · submitted {{ $sub->submitted_at?->diffForHumans() }}</p>
                     </div>
                     @if ($sub->grade)
                         <span class="rounded-full bg-reg-100 px-3 py-1 text-sm font-semibold text-reg-700">
@@ -35,14 +35,18 @@
                 @endif
 
                 <div class="mt-4 grid gap-3 sm:grid-cols-3">
-                    <input type="number" wire:model="scores.{{ $sub->id }}" min="0" max="{{ $assignment->max_points }}"
-                           placeholder="Score" value="{{ $sub->grade?->score }}" class="input">
+                    @if ($assignment->evaluation_type === 'pass_fail')
+                        <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="passed.{{ $sub->id }}" class="rounded text-reg-600"> Pass this submission</label>
+                    @else
+                        <input type="number" wire:model="scores.{{ $sub->id }}" min="0" max="{{ $assignment->max_points }}"
+                               placeholder="Score" value="{{ $sub->grade?->score }}" class="input">
+                    @endif
                     <input wire:model="feedbacks.{{ $sub->id }}" placeholder="Private feedback"
                            value="{{ $sub->grade?->feedback }}" class="input sm:col-span-2">
                 </div>
                 <div class="mt-3 flex gap-2">
-                    <button wire:click="grade({{ $sub->id }})" class="btn-primary btn-sm">Release grade</button>
-                    <button wire:click="returnForRevision({{ $sub->id }})" class="rounded-lg px-4 py-1.5 text-sm text-ink-600 hover:text-ink-900">Return for revision</button>
+                    <button wire:click="grade({{ $sub->id }})" @disabled($sub->status !== 'submitted') class="btn-primary btn-sm">Release grade</button>
+                    <button wire:click="returnForRevision({{ $sub->id }})" @disabled(! $assignment->allow_resubmission || $sub->status !== 'submitted') class="rounded-lg px-4 py-1.5 text-sm text-ink-600 hover:text-ink-900">Return for revision</button>
                 </div>
             </div>
         @empty

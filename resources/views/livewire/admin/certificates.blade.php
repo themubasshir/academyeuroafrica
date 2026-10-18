@@ -63,7 +63,12 @@
                             <p class="text-sm font-semibold text-ink-900">{{ $e->user->name }}</p>
                             <p class="text-xs text-ink-500">{{ $e->variant->course->title }} · enrolled {{ $e->enrolled_at->format('j M Y') }}</p>
                         </div>
-                        <button wire:click="manualIssue({{ $e->id }})" class="btn-secondary btn-sm">Evaluate &amp; issue</button>
+                        <div class="flex gap-2">
+                            @if ($e->variant->course->certificationPolicy?->require_admin_approval)
+                                <button wire:click="approve({{ $e->id }})" class="btn-secondary btn-sm">Approve completion</button>
+                            @endif
+                            <button wire:click="manualIssue({{ $e->id }})" class="btn-secondary btn-sm">Manual issue</button>
+                        </div>
                     </div>
                 @endforeach
             </div>

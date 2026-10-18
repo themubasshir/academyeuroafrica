@@ -28,7 +28,7 @@
             <input id="upload" type="file" wire:model="upload" class="mt-1 text-sm text-ink-600 file:mr-3 file:rounded-md file:border-0 file:bg-reg-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-reg-700">
             @error('upload')<p class="mt-1 text-xs text-red-600" role="alert">{{ $message }}</p>@enderror
         </div>
-        <button type="submit" wire:loading.attr="disabled" class="btn-primary">
+        <button type="submit" wire:loading.attr="disabled" @disabled($overdue && ! $assignment->allow_late_submissions) class="btn-primary">
             <span wire:loading.remove wire:target="save">Submit work</span>
             <span wire:loading wire:target="save">Submitting…</span>
         </button>
@@ -50,10 +50,24 @@
     @if ($grade && $grade->status === 'released')
         <section class="card-pad border-reg-100 bg-reg-50">
             <p class="register !text-reg-700">Feedback</p>
-            <p class="mt-2 font-display text-3xl font-semibold text-ink-950">{{ $grade->score }} <span class="text-lg font-medium text-ink-500">/ {{ $assignment->max_points }}</span></p>
+            <p class="mt-2 font-display text-3xl font-semibold text-ink-950">
+                @if ($assignment->evaluation_type === 'pass_fail'){{ $grade->passed ? 'Passed' : 'Not passed' }}@else{{ $grade->score }} <span class="text-lg font-medium text-ink-500">/ {{ $assignment->max_points }}</span>@endif
+            </p>
             @if ($grade->feedback)<p class="mt-3 border-t border-reg-100 pt-3 text-sm text-ink-700">{{ $grade->feedback }}</p>@endif
         </section>
     @elseif ($grade)
         <p class="badge-amber">Graded — awaiting release</p>
     @endif
+
+    <section>
+        <h2 class="h2">Submission history</h2>
+        <ul class="ledger mt-3">
+            @foreach ($history as $entry)
+                <li class="ledger-row">
+                    <span class="text-sm font-medium text-ink-800">Attempt {{ $entry->attempt_no }}</span>
+                    <span class="text-sm text-ink-500">{{ ucfirst($entry->status) }} · {{ $entry->submitted_at?->format('M j, Y g:i A') ?? 'Not submitted' }}</span>
+                </li>
+            @endforeach
+        </ul>
+    </section>
 </div>
