@@ -23,6 +23,8 @@ class Enrolments extends Component
 
     public ?string $expiresAt = null;
 
+    public ?string $grantReason = null;
+
     public function updatingSearch(): void
     {
         $this->resetPage();
@@ -39,14 +41,15 @@ class Enrolments extends Component
             'userId' => 'required|exists:users,id',
             'variantId' => 'required|exists:course_variants,id',
             'expiresAt' => 'nullable|date',
+            'grantReason' => 'required|string|max:500',
         ]);
         $enrolment = Enrolment::firstOrNew(['user_id' => $data['userId'], 'course_variant_id' => $data['variantId']]);
         abort_if($enrolment->exists && $enrolment->order_id !== null, 422, 'A commercial enrolment cannot be changed manually. Use the order or refund workflow.');
         $wasNew = ! $enrolment->exists;
-        $enrolment->fill(['status' => 'active', 'enrolled_at' => $enrolment->enrolled_at ?? now(), 'expires_at' => $data['expiresAt']]);
+        $enrolment->fill(['status' => 'active', 'source' => 'manual', 'grant_reason' => $data['grantReason'], 'enrolled_at' => $enrolment->enrolled_at ?? now(), 'expires_at' => $data['expiresAt']]);
         $enrolment->save();
         AuditLog::record($wasNew ? 'enrolment.granted' : 'enrolment.restored', $enrolment);
-        $this->reset(['userId', 'variantId', 'expiresAt']);
+        $this->reset(['userId', 'variantId', 'expiresAt', 'grantReason']);
     }
 
     public function suspend(int $enrolmentId): void

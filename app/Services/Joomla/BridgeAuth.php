@@ -24,9 +24,13 @@ class BridgeAuth
 {
     public function __construct(private BridgeClient $client) {}
 
-    public function consumeCode(string $code): User
+    public function consumeCode(string $code, string $state): User
     {
-        $claims = $this->client->exchangeCode($code);
+        if (! preg_match('/^[a-f0-9]{64}$/', $code) || ! preg_match('/^[a-f0-9]{64}$/', $state)) {
+            throw new RuntimeException('invalid-bridge-code');
+        }
+
+        $claims = $this->client->exchangeCode($code, $state);
 
         // Collision check BEFORE the transaction so the conflict row persists
         // even though we throw afterwards.

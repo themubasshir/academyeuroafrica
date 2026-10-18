@@ -43,7 +43,10 @@ class BridgeConsumeController extends Controller
         $request->session()->forget(['bridge_state', 'bridge_state_expires_at']);
 
         try {
-            $user = $bridge->consumeCode((string) $request->string('code'));
+            $user = $bridge->consumeCode(
+                (string) $request->string('code'),
+                (string) $request->string('state'),
+            );
         } catch (RuntimeException $e) {
             if (in_array($e->getMessage(), ['identity-conflict', 'joomla-admin-not-permitted'], true)) {
                 return redirect()->route('login')->withErrors([

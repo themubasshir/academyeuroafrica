@@ -16,6 +16,7 @@ use App\Models\Programme;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -23,6 +24,56 @@ use Tests\TestCase;
 class AdminPortalTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_administrator_can_create_and_invite_student_without_password(): void
+    {
+        Notification::fake();
+        $admin = User::factory()->academyAdmin()->create();
+
+        Livewire::actingAs($admin)
+            ->test(Users::class)
+            ->call('create')
+            ->set('name', 'Manual Student')
+            ->set('email', 'manual.student@example.test')
+            ->set('selectedRoles', [Role::STUDENT])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $student = User::where('email', 'manual.student@example.test')->firstOrFail();
+        $this->assertNull($student->password);
+        $this->assertTrue($student->fresh()->hasRole(Role::STUDENT));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'user.created', 'subject_id' => $student->id]);
+    }
+
+    public function test_academy_admin_cannot_promote_user_to_super_admin(): void
+    {
+        $admin = User::factory()->academyAdmin()->create();
+        $student = User::factory()->student()->create();
+
+        Livewire::actingAs($admin)
+            ->test(Users::class)
+            ->call('edit', $student->id)
+            ->set('selectedRoles', [Role::SUPER_ADMIN])
+            ->call('save')
+            ->assertStatus(403);
+
+        $this->assertFalse($student->fresh()->hasRole(Role::SUPER_ADMIN));
+    }
+
+    public function test_manual_enrolment_records_source_and_reason(): void
+    {
+        $admin = User::factory()->academyAdmin()->create();
+        $student = User::factory()->student()->create();
+        $variant = CourseVariant::factory()->create();
+
+        Livewire::actingAs($admin)->test(Enrolments::class)
+            ->set('userId', $student->id)
+            ->set('variantId', $variant->id)
+            ->set('grantReason', 'Scholarship')
+            ->call('grant');
+
+        $this->assertDatabaseHas('enrolments', ['user_id' => $student->id, 'source' => 'manual', 'grant_reason' => 'Scholarship', 'order_id' => null]);
+    }
 
     public function test_non_administrators_cannot_access_new_admin_surfaces(): void
     {
@@ -106,6 +157,7 @@ class AdminPortalTest extends TestCase
             ->test(Enrolments::class)
             ->set('userId', $student->id)
             ->set('variantId', $variant->id)
+            ->set('grantReason', 'Scholarship approved by academy administrator')
             ->call('grant')
             ->assertHasNoErrors();
 
@@ -113,6 +165,7 @@ class AdminPortalTest extends TestCase
             ->test(Enrolments::class)
             ->set('userId', $student->id)
             ->set('variantId', $variant->id)
+            ->set('grantReason', 'Scholarship approved by academy administrator')
             ->call('grant')
             ->assertHasNoErrors();
 

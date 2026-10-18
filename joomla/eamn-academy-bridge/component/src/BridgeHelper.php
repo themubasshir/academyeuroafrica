@@ -76,9 +76,12 @@ class BridgeHelper
     }
 
     /**
-     * Server-to-server flow: academy POSTs a JSON body {"code": "..."} with
+     * Server-to-server flow: academy POSTs a JSON body {"code":"...","state":"..."} with
      * X-EAMN-Timestamp and X-EAMN-Signature headers. We verify, burn the code,
      * and return identity claims as JSON.
+     *
+     * The state must match the code's stored state_hash. A mismatch leaves the
+     * code unconsumed so the legitimate request can retry with the right state.
      */
     public function handleExchange(Input $input): void
     {
@@ -108,15 +111,21 @@ class BridgeHelper
 
         $data = json_decode($body, true);
         $code = $data['code'] ?? '';
-        $userId = $this->consumeCode($code);
+        $state = $data['state'] ?? '';
 
-        if ($userId === null) {
-            throw new \RuntimeException('Invalid or expired code', 401);
+        if (! preg_match('/^[a-f0-9]{64}$/', $state)) {
+            throw new \RuntimeException('Invalid or missing state', 401);
+        }
+
+        $result = $this->consumeCode($code, $state);
+
+        if (! $result['valid']) {
+            throw new \RuntimeException('Invalid, expired, or state-mismatched code', 401);
         }
 
         $user = Factory::getContainer()
             ->get(UserFactoryInterface::class)
-            ->loadUserById($userId);
+            ->loadUserById($result['userId']);
 
         if ($user->block) {
             throw new \RuntimeException('Account disabled', 403);
@@ -145,32 +154,58 @@ class BridgeHelper
     }
 
     /**
-     * Burn a code and return the owning user id, or null if invalid/expired.
-     * Deleting first inside the lookup makes it single-use.
+     * Consume a code with state validation.
+     * Returns ['valid' => true, 'userId' => int] on success,
+     * or ['valid' => false] on invalid/expired/state-mismatch,
+     * or throws on database errors.
+     *
+     * State and code are validated atomically with both hashes matching.
+     * If state does not match, the code is NOT consumed (not deleted).
      */
-    private function consumeCode(string $code): ?int
+    private function consumeCode(string $code, string $state): array
     {
         if (! preg_match('/^[a-f0-9]{64}$/', $code)) {
-            return null;
+            return ['valid' => false];
+        }
+        if (! preg_match('/^[a-f0-9]{64}$/', $state)) {
+            return ['valid' => false];
         }
 
         $db = Factory::getDbo();
-        $hash = hash('sha256', $code);
+        $codeHash = hash('sha256', $code);
+        $stateHash = hash('sha256', $state);
         $db->transactionStart();
 
         try {
             $row = $db->setQuery(
                 $db->getQuery(true)
-                    ->select(['id', 'user_id', 'expires_at'])
+                    ->select(['id', 'user_id', 'expires_at', 'state_hash'])
                     ->from('#__eamnbridge_codes')
-                    ->where($db->quoteName('code_hash').' = '.$db->quote($hash))
+                    ->where($db->quoteName('code_hash').' = '.$db->quote($codeHash))
                     ->forUpdate()
             )->loadObject();
 
             if ($row === null) {
+                $db->transactionRollback();
+
+                return ['valid' => false];
+            }
+
+            if (! hash_equals($row->state_hash, $stateHash)) {
+                $db->transactionRollback();
+
+                return ['valid' => false];
+            }
+
+            if (strtotime($row->expires_at) < time()) {
+                $db->setQuery(
+                    $db->getQuery(true)
+                        ->delete('#__eamnbridge_codes')
+                        ->where($db->quoteName('id').' = '.(int) $row->id)
+                )->execute();
                 $db->transactionCommit();
 
-                return null;
+                return ['valid' => false];
             }
 
             $db->setQuery(
@@ -180,7 +215,7 @@ class BridgeHelper
             )->execute();
             $db->transactionCommit();
 
-            return strtotime($row->expires_at) < time() ? null : (int) $row->user_id;
+            return ['valid' => true, 'userId' => (int) $row->user_id];
         } catch (\Throwable $e) {
             $db->transactionRollback();
 

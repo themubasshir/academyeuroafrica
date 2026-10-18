@@ -34,10 +34,11 @@ class BridgeClient
      *
      * @return array{sub:string,email:string,name:string,groups:array<int,string>}
      */
-    public function exchangeCode(string $code): array
+    public function exchangeCode(string $code, string $state): array
     {
         $response = $this->signedPost('/index.php?option=com_eamnbridge&task=exchange', [
             'code' => $code,
+            'state' => $state,
         ]);
 
         if (! $response->successful()) {
@@ -46,13 +47,34 @@ class BridgeClient
 
         $claims = $response->json();
 
+        if (! is_array($claims)) {
+            throw new RuntimeException('Bridge response is not valid JSON.');
+        }
+
         foreach (['sub', 'email', 'name'] as $key) {
-            if (empty($claims[$key])) {
+            if (! isset($claims[$key]) || ! is_string($claims[$key]) || trim($claims[$key]) === '') {
                 throw new RuntimeException("Bridge response missing claim: {$key}");
             }
         }
 
-        return $claims;
+        if (! filter_var($claims['email'], FILTER_VALIDATE_EMAIL)) {
+            throw new RuntimeException('Bridge response contains invalid email.');
+        }
+
+        if (! preg_match('/^[1-9][0-9]*$/', $claims['sub'])) {
+            throw new RuntimeException('Bridge response contains invalid subject.');
+        }
+
+        if (isset($claims['groups']) && ! is_array($claims['groups'])) {
+            throw new RuntimeException('Bridge response contains invalid groups.');
+        }
+
+        return [
+            'sub' => $claims['sub'],
+            'email' => $claims['email'],
+            'name' => $claims['name'],
+            'groups' => array_values(array_filter($claims['groups'] ?? [], 'is_string')),
+        ];
     }
 
     public function signedPost(string $path, array $payload): Response

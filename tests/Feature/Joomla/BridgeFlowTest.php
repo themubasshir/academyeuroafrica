@@ -57,12 +57,12 @@ class BridgeFlowTest extends TestCase
             '*' => Http::response(['sub' => '42', 'email' => $user->email, 'name' => $user->name, 'groups' => []]),
         ]);
 
-        $state = str_repeat('s', 64);
+        $state = str_repeat('a', 64);
         $this->withSession([
             'bridge_state' => $state,
             'bridge_state_expires_at' => now()->addMinute()->timestamp,
         ])
-            ->get(route('bridge.consume', ['code' => str_repeat('d', 64), 'state' => $state]));
+            ->get(route('bridge.consume', ['code' => str_repeat('e', 64), 'state' => $state]));
 
         $this->assertAuthenticatedAs($user);
     }
@@ -73,7 +73,7 @@ class BridgeFlowTest extends TestCase
             '*' => Http::response(['sub' => '77', 'email' => 'new@joomla.eu', 'name' => 'New User', 'groups' => []]),
         ]);
 
-        $state = str_repeat('s', 64);
+        $state = str_repeat('a', 64);
         $this->withSession([
             'bridge_state' => $state,
             'bridge_state_expires_at' => now()->addMinute()->timestamp,
@@ -95,12 +95,12 @@ class BridgeFlowTest extends TestCase
             '*' => Http::response(['sub' => '42', 'email' => $user->email, 'name' => $user->name, 'groups' => []]),
         ]);
 
-        $state = str_repeat('s', 64);
+        $state = str_repeat('a', 64);
         $this->withSession([
             'bridge_state' => $state,
             'bridge_state_expires_at' => now()->addMinute()->timestamp,
         ])
-            ->get(route('bridge.consume', ['code' => str_repeat('d', 64), 'state' => $state]));
+            ->get(route('bridge.consume', ['code' => str_repeat('e', 64), 'state' => $state]));
 
         $this->assertGuest();
     }
@@ -112,7 +112,7 @@ class BridgeFlowTest extends TestCase
             '*' => Http::response(['sub' => '99', 'email' => 'clash@x.eu', 'name' => 'Clash', 'groups' => []]),
         ]);
 
-        $state = str_repeat('s', 64);
+        $state = str_repeat('a', 64);
         $this->withSession([
             'bridge_state' => $state,
             'bridge_state_expires_at' => now()->addMinute()->timestamp,
@@ -175,7 +175,7 @@ class BridgeFlowTest extends TestCase
         Http::fake([
             '*' => Http::response(['sub' => '88', 'email' => 'replay@joomla.eu', 'name' => 'Replay', 'groups' => []]),
         ]);
-        $state = str_repeat('r', 64);
+        $state = str_repeat('b', 64);
         $session = [
             'bridge_state' => $state,
             'bridge_state_expires_at' => now()->addMinute()->timestamp,
@@ -199,7 +199,7 @@ class BridgeFlowTest extends TestCase
                 'groups' => ['8', 'Super Users'],
             ]),
         ]);
-        $state = str_repeat('g', 64);
+        $state = str_repeat('c', 64);
 
         $this->withSession([
             'bridge_state' => $state,
@@ -215,7 +215,7 @@ class BridgeFlowTest extends TestCase
     public function test_package_intent_survives_identity_exchange_to_checkout(): void
     {
         $variant = CourseVariant::factory()->create();
-        $state = str_repeat('p', 64);
+        $state = str_repeat('e', 64);
         Http::fake([
             '*' => Http::response(['sub' => '90', 'email' => 'package@joomla.eu', 'name' => 'Package', 'groups' => []]),
         ]);
@@ -229,7 +229,7 @@ class BridgeFlowTest extends TestCase
                 'expires_at' => now()->addMinute()->timestamp,
             ],
             'url.intended' => route('checkout.show', $variant),
-        ])->get(route('bridge.consume', ['code' => str_repeat('z', 64), 'state' => $state]))
+        ])->get(route('bridge.consume', ['code' => str_repeat('a', 64), 'state' => $state]))
             ->assertRedirect(route('checkout.show', $variant));
 
         $this->assertNull(session('bridge_intent'));

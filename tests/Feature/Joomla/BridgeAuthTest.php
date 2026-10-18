@@ -23,7 +23,7 @@ class BridgeAuthTest extends TestCase
             ]),
         ]);
 
-        $claims = (new BridgeClient)->exchangeCode(str_repeat('a', 64));
+        $claims = (new BridgeClient)->exchangeCode(str_repeat('a', 64), str_repeat('b', 64));
 
         $this->assertSame('42', $claims['sub']);
         $this->assertSame('a@b.c', $claims['email']);
@@ -40,7 +40,19 @@ class BridgeAuthTest extends TestCase
             },
         ]);
 
-        (new BridgeClient)->exchangeCode(str_repeat('b', 64));
+        (new BridgeClient)->exchangeCode(str_repeat('b', 64), str_repeat('c', 64));
+    }
+
+    public function test_exchange_rejects_invalid_claims(): void
+    {
+        Http::fake([
+            '*' => Http::response([
+                'sub' => 'not-numeric', 'email' => 'not-an-email', 'name' => 'N', 'groups' => 'admin',
+            ]),
+        ]);
+
+        $this->expectException(\RuntimeException::class);
+        (new BridgeClient)->exchangeCode(str_repeat('d', 64), str_repeat('e', 64));
     }
 
     public function test_failed_exchange_throws(): void
@@ -48,6 +60,6 @@ class BridgeAuthTest extends TestCase
         Http::fake(['*' => Http::response('no', 401)]);
 
         $this->expectException(\RuntimeException::class);
-        (new BridgeClient)->exchangeCode(str_repeat('c', 64));
+        (new BridgeClient)->exchangeCode(str_repeat('c', 64), str_repeat('d', 64));
     }
 }
