@@ -15,6 +15,79 @@ class AdminModalWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_programme_modal_starts_closed_and_reopens_without_stale_values(): void
+    {
+        $admin = User::factory()->academyAdmin()->create();
+        $programme = Programme::factory()->create([
+            'name' => 'Existing Programme',
+            'description' => 'Existing description',
+            'status' => 'published',
+            'sort_order' => 7,
+        ]);
+
+        Livewire::actingAs($admin)->test(Programmes::class)
+            ->assertSet('showProgrammeModal', false)
+            ->assertSeeHtml('x-show="$wire.showProgrammeModal"')
+            ->assertDontSee('entangle(', false)
+            ->call('editProgramme', $programme->id)
+            ->assertSet('showProgrammeModal', true)
+            ->assertSet('editingId', $programme->id)
+            ->assertSet('name', 'Existing Programme')
+            ->set('name', 'Unsaved Programme')
+            ->call('closeProgrammeModal')
+            ->assertSet('showProgrammeModal', false)
+            ->assertSet('editingId', null)
+            ->assertSet('name', '')
+            ->call('createProgramme')
+            ->assertSet('showProgrammeModal', true)
+            ->assertSet('editingId', null)
+            ->assertSet('name', '')
+            ->assertSet('description', '')
+            ->assertSet('status', 'draft')
+            ->assertSet('sortOrder', 0);
+    }
+
+    public function test_course_modal_starts_closed_and_reopens_without_stale_values(): void
+    {
+        $admin = User::factory()->academyAdmin()->create();
+        $programme = Programme::factory()->create();
+        $course = Course::factory()->create([
+            'programme_id' => $programme->id,
+            'title' => 'Existing Course',
+            'description' => 'Existing description',
+            'learning_outcomes' => ['First outcome'],
+            'delivery_types' => ['live'],
+            'status' => 'published',
+            'access_days' => 30,
+            'sort_order' => 8,
+        ]);
+
+        Livewire::actingAs($admin)->test(Courses::class)
+            ->assertSet('showCourseModal', false)
+            ->assertSeeHtml('x-show="$wire.showCourseModal"')
+            ->assertDontSee('entangle(', false)
+            ->call('editCourse', $course->id)
+            ->assertSet('showCourseModal', true)
+            ->assertSet('editingId', $course->id)
+            ->assertSet('title', 'Existing Course')
+            ->set('title', 'Unsaved Course')
+            ->call('closeCourseModal')
+            ->assertSet('showCourseModal', false)
+            ->assertSet('editingId', null)
+            ->assertSet('title', '')
+            ->call('createCourse')
+            ->assertSet('showCourseModal', true)
+            ->assertSet('editingId', null)
+            ->assertSet('title', '')
+            ->assertSet('description', '')
+            ->assertSet('learningOutcomes', '')
+            ->assertSet('deliveryTypes', '')
+            ->assertSet('accessDays', null)
+            ->assertSet('status', 'draft')
+            ->assertSet('sortOrder', 0)
+            ->assertSet('trainerId', null);
+    }
+
     public function test_programme_create_edit_validation_and_cancel_workflow(): void
     {
         $admin = User::factory()->academyAdmin()->create();

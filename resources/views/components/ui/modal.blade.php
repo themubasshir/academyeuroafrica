@@ -17,33 +17,16 @@
 @endphp
 
 <div
-    x-data="{
-        shown: @entangle($open),
-        dirty: false,
-        returnFocus: null,
-        close() {
-            if ({{ $confirmClose ? 'this.dirty' : 'false' }} && ! window.confirm('Discard your unsaved changes?')) {
-                return;
-            }
-
-            this.dirty = false;
-            $wire.{{ $close }}();
-        },
-    }"
-    x-init="$watch('shown', value => {
-        if (value) {
-            returnFocus = document.activeElement;
-            dirty = false;
-            $nextTick(() => $refs.panel.querySelector('[autofocus], input, select, textarea, button')?.focus());
-        } else if (returnFocus) {
-            $nextTick(() => returnFocus?.focus());
-        }
-    })"
-    x-show="shown"
+    x-data="modal"
+    data-open-property="{{ $open }}"
+    data-close-method="{{ $close }}"
+    data-confirm-close="{{ $confirmClose ? 'true' : 'false' }}"
+    x-effect="syncVisibility($wire.{{ $open }})"
+    x-show="$wire.{{ $open }}"
     x-cloak
-    x-on:keydown.escape.window="if (shown) close()"
-    x-on:input.capture="if (shown) dirty = true"
-    x-on:change.capture="if (shown) dirty = true"
+    x-on:keydown.escape.window="requestClose($wire.{{ $open }})"
+    x-on:input.capture="markDirty($wire.{{ $open }})"
+    x-on:change.capture="markDirty($wire.{{ $open }})"
     class="fixed inset-0 z-[70] overflow-y-auto"
     role="dialog"
     aria-modal="true"
@@ -55,7 +38,7 @@
 
         <div
             x-ref="panel"
-            x-trap.inert.noscroll="shown"
+            x-trap.inert.noscroll="$wire.{{ $open }}"
             x-on:click.stop
             x-transition:enter="transition duration-200 ease-out"
             x-transition:enter-start="translate-y-3 opacity-0 sm:translate-y-0 sm:scale-[0.98]"
