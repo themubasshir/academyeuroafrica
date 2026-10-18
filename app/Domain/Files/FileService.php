@@ -83,6 +83,33 @@ class FileService
         ]);
     }
 
+    /** Replace a lesson body only after the new, type-appropriate file is safely stored. */
+    public function replaceLessonContent(Material $material, UploadedFile $file, string $type): Material
+    {
+        $mime = (string) $file->getMimeType();
+        $allowed = $type === 'pdf' ? ['application/pdf'] : self::VIDEO_MIME;
+        $maximum = $type === 'pdf' ? self::MAX_BYTES : self::MAX_VIDEO_BYTES;
+
+        abort_unless(in_array($mime, $allowed, true), 422, 'The uploaded file does not match the lesson type.');
+        abort_if($file->getSize() > $maximum, 422, 'File too large.');
+
+        $directory = $type === 'pdf' ? 'materials' : 'lesson-videos';
+        $extension = $file->guessExtension() ?: ($type === 'pdf' ? 'pdf' : 'mp4');
+        $path = $directory.'/'.Str::random(40).'.'.$extension;
+        $oldPath = $material->path;
+
+        Storage::disk($material->disk)->put($path, $file->getContent());
+        $material->forceFill([
+            'path' => $path,
+            'mime' => $mime,
+            'size_bytes' => $file->getSize(),
+            'original_name' => $file->getClientOriginalName(),
+        ])->save();
+        Storage::disk($material->disk)->delete($oldPath);
+
+        return $material->fresh();
+    }
+
     /** Replace a stored material after applying the same MIME and size policy. */
     public function replaceMaterial(Material $material, UploadedFile $file): Material
     {

@@ -62,6 +62,17 @@ class FileAuthorizationTest extends TestCase
         $this->actingAs($student)->get(route('files.material', $material))->assertForbidden();
     }
 
+    public function test_enrolled_student_cannot_download_trainer_only_material(): void
+    {
+        $course = Course::factory()->create();
+        $material = $this->materialOnCourse($course);
+        $material->update(['visibility' => 'trainers']);
+
+        $this->actingAs($this->enrolledStudent($course))
+            ->get(route('files.material', $material))
+            ->assertForbidden();
+    }
+
     public function test_guest_denied(): void
     {
         $material = $this->materialOnCourse(Course::factory()->create());

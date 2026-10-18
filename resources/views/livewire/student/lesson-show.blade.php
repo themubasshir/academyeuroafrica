@@ -15,7 +15,11 @@
 
     @if ($lesson->type === 'pdf' && $primaryMaterial)
         <iframe src="{{ route('files.material.inline', $primaryMaterial) }}" class="h-[70vh] w-full rounded-lg border border-paper-300 bg-white" title="{{ $lesson->title }} PDF"></iframe>
-        <p class="text-sm text-ink-600">Opening this document does not complete the lesson. Use the acknowledgement above after reading it.</p>
+        @if ($lesson->requires_acknowledgement)
+            <p class="text-sm text-ink-600">Opening this document does not complete the lesson. Use the acknowledgement above after reading it.</p>
+        @else
+            <p class="text-sm text-ink-600">This reading is recorded as complete when opened.</p>
+        @endif
     @elseif ($video?->provider === 'upload' && $primaryMaterial)
         <div class="space-y-3">
             <video controls preload="metadata" class="aspect-video w-full rounded-lg bg-ink-950 shadow-md"

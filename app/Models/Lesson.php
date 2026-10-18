@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-#[Fillable(['course_module_id', 'title', 'content', 'type', 'sort_order', 'source_key', 'status', 'requires_previous', 'is_required', 'completion_threshold', 'primary_material_id'])]
+#[Fillable(['course_module_id', 'title', 'content', 'type', 'sort_order', 'source_key', 'status', 'requires_previous', 'is_required', 'requires_acknowledgement', 'completion_threshold', 'primary_material_id'])]
 class Lesson extends Model
 {
     use HasFactory;
@@ -55,6 +55,7 @@ class Lesson extends Model
         return [
             'requires_previous' => 'boolean',
             'is_required' => 'boolean',
+            'requires_acknowledgement' => 'boolean',
             'completion_threshold' => 'integer',
         ];
     }

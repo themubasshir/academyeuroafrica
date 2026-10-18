@@ -45,5 +45,13 @@ new class extends Component
         <article class="card-pad prose max-w-none text-ink-700">{!! $lesson->content !!}</article>
     @endif
 
-    <p class="text-sm text-ink-500">{{ $lesson->is_required ? 'Required' : 'Optional' }} lesson@if($lesson->type === 'video') · completes at {{ $lesson->completion_threshold }}% playback progress@endif.</p>
+    <p class="text-sm text-ink-500">
+        {{ $lesson->is_required ? 'Required' : 'Optional' }} lesson
+        @if ($lesson->type === 'video')
+            · completes at {{ $lesson->completion_threshold }}% playback progress
+        @elseif ($lesson->type === 'pdf')
+            · {{ $lesson->requires_acknowledgement ? 'learner acknowledgement required' : 'completes when opened' }}
+        @endif
+        .
+    </p>
 </div>

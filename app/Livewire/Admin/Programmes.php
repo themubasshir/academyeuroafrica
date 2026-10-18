@@ -14,6 +14,8 @@ class Programmes extends Component
 
     public ?int $editingId = null;
 
+    public bool $showProgrammeModal = false;
+
     public string $name = '';
 
     public string $description = '';
@@ -43,17 +45,26 @@ class Programmes extends Component
         }
         $programme->save();
         AuditLog::record($this->editingId ? 'programme.updated' : 'programme.created', $programme);
-        $this->resetForm();
+        session()->flash('saved', $this->editingId ? 'Programme updated.' : 'Programme created.');
+        $this->closeProgrammeModal();
     }
 
-    public function edit(int $programmeId): void
+    public function createProgramme(): void
     {
+        $this->resetForm();
+        $this->showProgrammeModal = true;
+    }
+
+    public function editProgramme(int $programmeId): void
+    {
+        $this->resetForm();
         $programme = Programme::findOrFail($programmeId);
         $this->editingId = $programme->id;
         $this->name = $programme->name;
         $this->description = (string) $programme->description;
         $this->status = $programme->status;
         $this->sortOrder = $programme->sort_order;
+        $this->showProgrammeModal = true;
     }
 
     public function archive(int $programmeId): void
@@ -63,7 +74,13 @@ class Programmes extends Component
         AuditLog::record('programme.archived', $programme);
     }
 
-    public function resetForm(): void
+    public function closeProgrammeModal(): void
+    {
+        $this->showProgrammeModal = false;
+        $this->resetForm();
+    }
+
+    private function resetForm(): void
     {
         $this->reset(['editingId', 'name', 'description', 'sortOrder']);
         $this->status = 'draft';

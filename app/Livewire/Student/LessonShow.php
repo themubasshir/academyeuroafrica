@@ -33,6 +33,10 @@ class LessonShow extends Component
         $this->positionSeconds = $progress?->position_seconds ?? 0;
         $this->progressPercent = $progress?->progress_percent ?? 0;
         $this->completed = $progress?->completed_at !== null;
+
+        if ($lesson->type === 'pdf' && ! $lesson->requires_acknowledgement && ! $this->completed) {
+            $this->markComplete();
+        }
     }
 
     public function savePosition(int $seconds): void
@@ -88,7 +92,7 @@ class LessonShow extends Component
             [
                 'completed_at' => now(),
                 'progress_percent' => 100,
-                'acknowledged_at' => $this->lesson->type === 'pdf' ? now() : null,
+                'acknowledged_at' => $this->lesson->type === 'pdf' && $this->lesson->requires_acknowledgement ? now() : null,
             ]
         );
         $this->progressPercent = 100;

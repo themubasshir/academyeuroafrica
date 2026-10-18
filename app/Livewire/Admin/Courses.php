@@ -16,6 +16,8 @@ class Courses extends Component
 
     public ?int $editingId = null;
 
+    public bool $showCourseModal = false;
+
     public string $title = '';
 
     public ?int $programmeId = null;
@@ -67,11 +69,19 @@ class Courses extends Component
         if ($this->trainerId) {
             TrainerAssignment::updateOrCreate(['course_id' => $course->id, 'trainer_id' => $this->trainerId]);
         }
-        $this->resetForm();
+        session()->flash('saved', $this->editingId ? 'Course updated.' : 'Course created.');
+        $this->closeCourseModal();
     }
 
-    public function edit(int $courseId): void
+    public function createCourse(): void
     {
+        $this->resetForm();
+        $this->showCourseModal = true;
+    }
+
+    public function editCourse(int $courseId): void
+    {
+        $this->resetForm();
         $course = Course::findOrFail($courseId);
         $this->editingId = $course->id;
         $this->title = $course->title;
@@ -83,6 +93,7 @@ class Courses extends Component
         $this->accessDays = $course->access_days;
         $this->sortOrder = $course->sort_order;
         $this->trainerId = $course->trainerAssignments()->value('trainer_id');
+        $this->showCourseModal = true;
     }
 
     public function archive(int $courseId): void
@@ -114,7 +125,13 @@ class Courses extends Component
         $course->update(['checkout_variant_id' => $variant->id]);
     }
 
-    public function resetForm(): void
+    public function closeCourseModal(): void
+    {
+        $this->showCourseModal = false;
+        $this->resetForm();
+    }
+
+    private function resetForm(): void
     {
         $this->reset(['editingId', 'title', 'programmeId', 'description', 'learningOutcomes', 'deliveryTypes', 'accessDays', 'sortOrder', 'trainerId']);
         $this->status = 'draft';
@@ -124,7 +141,10 @@ class Courses extends Component
     public function render()
     {
         return view('livewire.admin.courses', [
-            'courses' => Course::with(['programme', 'variants', 'checkoutVariant.course'])->latest()->paginate(25),
+            'courses' => Course::with(['programme', 'variants', 'checkoutVariant.course'])
+                ->withCount(['modules', 'lessons'])
+                ->latest()
+                ->paginate(25),
             'programmes' => Programme::orderBy('name')->get(),
             'trainers' => User::whereHas('roles', fn ($query) => $query->where('name', 'trainer'))->orderBy('name')->get(),
         ])->layout('layouts::app', ['title' => 'Courses']);

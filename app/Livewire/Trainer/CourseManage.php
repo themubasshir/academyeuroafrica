@@ -10,6 +10,8 @@ use App\Models\Group;
 use App\Models\Lesson;
 use App\Models\Material;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -19,10 +21,17 @@ class CourseManage extends Component
 
     public Course $course;
 
-    // module/lesson form state
+    public bool $showModuleModal = false;
+
+    public ?int $editingModuleId = null;
+
     public string $moduleTitle = '';
 
     public string $moduleStatus = 'draft';
+
+    public int $moduleSortOrder = 0;
+
+    public bool $showLessonModal = false;
 
     public ?int $editingLessonId = null;
 
@@ -30,11 +39,15 @@ class CourseManage extends Component
 
     public string $lessonContent = '';
 
+    public bool $showContentPreview = false;
+
     public string $lessonType = 'text';
 
     public string $lessonStatus = 'draft';
 
     public bool $lessonRequired = true;
+
+    public bool $requiresAcknowledgement = true;
 
     public int $completionThreshold = 90;
 
@@ -60,6 +73,8 @@ class CourseManage extends Component
 
     public string $materialAudience = 'course'; // course | group | student
 
+    public string $materialVisibility = 'enrolled';
+
     public ?int $materialGroupId = null;
 
     public ?int $materialStudentId = null;
@@ -75,19 +90,50 @@ class CourseManage extends Component
         $this->authorize('manageContent', $course);
     }
 
+    public function createModule(): void
+    {
+        $this->resetModuleForm();
+        $this->moduleSortOrder = (int) $this->course->modules()->max('sort_order') + 1;
+        $this->showModuleModal = true;
+    }
+
+    public function editModule(int $moduleId): void
+    {
+        $this->resetModuleForm();
+        $module = $this->course->modules()->findOrFail($moduleId);
+        $this->editingModuleId = $module->id;
+        $this->moduleTitle = $module->title;
+        $this->moduleStatus = $module->status;
+        $this->moduleSortOrder = $module->sort_order;
+        $this->showModuleModal = true;
+    }
+
     public function saveModule(): void
     {
-        $this->validate([
+        $data = $this->validate([
             'moduleTitle' => 'required|string|max:255',
             'moduleStatus' => 'required|in:draft,published',
+            'moduleSortOrder' => 'required|integer|min:0',
         ]);
-        $this->course->modules()->create([
-            'title' => $this->moduleTitle,
-            'sort_order' => $this->course->modules()->max('sort_order') + 1,
-            'status' => $this->moduleStatus,
+
+        $module = $this->editingModuleId
+            ? $this->course->modules()->findOrFail($this->editingModuleId)
+            : $this->course->modules()->make();
+        $module->fill([
+            'title' => $data['moduleTitle'],
+            'sort_order' => $data['moduleSortOrder'],
+            'status' => $data['moduleStatus'],
         ]);
-        $this->reset('moduleTitle');
-        $this->moduleStatus = 'draft';
+        $module->save();
+
+        session()->flash('saved', $this->editingModuleId ? 'Module updated.' : 'Module created.');
+        $this->closeModuleModal();
+    }
+
+    public function closeModuleModal(): void
+    {
+        $this->showModuleModal = false;
+        $this->resetModuleForm();
     }
 
     public function deleteModule(int $id): void
@@ -117,7 +163,7 @@ class CourseManage extends Component
 
     public function editLesson(?int $lessonId, int $moduleId): void
     {
-        $this->editingLessonId = $lessonId;
+        $this->resetLessonForm();
         $this->lessonModuleId = $moduleId;
         if ($lessonId) {
             $l = Lesson::whereKey($lessonId)
@@ -129,29 +175,36 @@ class CourseManage extends Component
             $this->lessonType = $l->type;
             $this->lessonStatus = $l->status;
             $this->lessonRequired = $l->is_required ?? true;
+            $this->requiresAcknowledgement = $l->requires_acknowledgement ?? true;
             $this->completionThreshold = $l->completion_threshold ?? 90;
             $this->videoSource = $l->video?->provider === 'upload' ? 'upload' : 'hosted';
             $this->videoId = (string) $l->video?->provider_video_id;
             $this->videoDurationSeconds = $l->video?->duration_seconds;
-        } else {
-            $this->resetLessonForm(keepModule: true);
         }
+        $this->editingLessonId = $lessonId;
+        $this->showLessonModal = true;
     }
 
     public function saveLesson(FileService $files): void
     {
-        $this->validate([
+        $rules = [
             'lessonTitle' => 'required|string|max:255',
             'lessonType' => 'required|in:text,rich_text,pdf,video',
             'lessonStatus' => 'required|in:draft,published',
             'lessonRequired' => 'required|boolean',
-            'completionThreshold' => 'required|integer|min:1|max:100',
+            'requiresAcknowledgement' => 'required|boolean',
+            'completionThreshold' => $this->lessonType === 'video' ? 'required|integer|min:1|max:100' : 'nullable',
             'lessonModuleId' => 'required|integer',
-            'videoSource' => 'required_if:lessonType,video|in:hosted,upload',
-            'videoId' => 'nullable|string|max:500',
-            'videoDurationSeconds' => 'required_if:lessonType,video|nullable|integer|min:1|max:86400',
-            'lessonUpload' => 'nullable|file|max:524288',
-        ]);
+            'videoSource' => $this->lessonType === 'video' ? 'required|in:hosted,upload' : 'nullable',
+            'videoId' => $this->lessonType === 'video' && $this->videoSource === 'hosted' ? 'required|string|max:500' : 'nullable',
+            'videoDurationSeconds' => $this->lessonType === 'video' ? 'required|integer|min:1|max:86400' : 'nullable',
+            'lessonUpload' => match (true) {
+                $this->lessonType === 'pdf' => 'nullable|file|mimetypes:application/pdf|max:25600',
+                $this->lessonType === 'video' && $this->videoSource === 'upload' => 'nullable|file|mimetypes:video/mp4,video/webm|max:524288',
+                default => 'nullable',
+            },
+        ];
+        $this->validate($rules);
 
         $module = $this->course->modules()->findOrFail($this->lessonModuleId);
 
@@ -162,8 +215,11 @@ class CourseManage extends Component
             : new Lesson;
 
         if ($this->lessonType === 'video' && $this->videoSource === 'hosted') {
-            abort_if(blank($this->videoId), 422, 'Enter a hosted video ID or URL.');
-            abort_unless($this->isApprovedHostedVideo($this->videoId), 422, 'Use a YouTube or Vimeo video ID or URL.');
+            if (! $this->isApprovedHostedVideo($this->videoId)) {
+                throw ValidationException::withMessages([
+                    'videoId' => 'Enter a valid YouTube or Vimeo video ID or URL.',
+                ]);
+            }
         }
 
         $hasCompatiblePrimary = $lesson->exists
@@ -173,7 +229,9 @@ class CourseManage extends Component
                 : in_array($lesson->primaryMaterial->mime, FileService::VIDEO_MIME, true));
         if (($this->lessonType === 'pdf' || ($this->lessonType === 'video' && $this->videoSource === 'upload'))
             && $this->lessonUpload === null && ! $hasCompatiblePrimary) {
-            abort(422, 'Upload the primary lesson file.');
+            throw ValidationException::withMessages([
+                'lessonUpload' => 'Upload the primary lesson file.',
+            ]);
         }
 
         $lesson->fill([
@@ -183,7 +241,8 @@ class CourseManage extends Component
             'type' => $this->lessonType,
             'status' => $this->lessonStatus,
             'is_required' => $this->lessonRequired,
-            'completion_threshold' => $this->completionThreshold,
+            'requires_acknowledgement' => $this->lessonType === 'pdf' ? $this->requiresAcknowledgement : true,
+            'completion_threshold' => $this->lessonType === 'video' ? $this->completionThreshold : 90,
         ]);
         if (! $this->editingLessonId) {
             $lesson->sort_order = $module->lessons()->max('sort_order') + 1;
@@ -191,12 +250,10 @@ class CourseManage extends Component
         $lesson->save();
 
         if ($this->lessonUpload !== null) {
-            $material = $files->storeLessonContent(
-                $this->lessonUpload,
-                auth()->user(),
-                $lesson,
-                $this->lessonType === 'pdf' ? 'pdf' : 'video',
-            );
+            $type = $this->lessonType === 'pdf' ? 'pdf' : 'video';
+            $material = $lesson->primaryMaterial
+                ? $files->replaceLessonContent($lesson->primaryMaterial, $this->lessonUpload, $type)
+                : $files->storeLessonContent($this->lessonUpload, auth()->user(), $lesson, $type);
             $lesson->forceFill(['primary_material_id' => $material->id])->save();
         } elseif (! in_array($this->lessonType, ['pdf', 'video'], true)
             || ($this->lessonType === 'video' && $this->videoSource === 'hosted')) {
@@ -221,8 +278,34 @@ class CourseManage extends Component
             $lesson->video()->delete();
         }
 
-        $this->resetLessonForm();
         session()->flash('saved', 'Lesson saved.');
+        $this->closeLessonModal();
+    }
+
+    public function closeLessonModal(): void
+    {
+        $this->showLessonModal = false;
+        $this->resetLessonForm();
+    }
+
+    public function updatedLessonType(): void
+    {
+        $this->lessonUpload = null;
+        $this->resetValidation(['lessonUpload', 'videoId', 'videoDurationSeconds', 'completionThreshold']);
+    }
+
+    public function updatedVideoSource(): void
+    {
+        $this->lessonUpload = null;
+        $this->resetValidation(['lessonUpload', 'videoId']);
+    }
+
+    #[Computed]
+    public function lessonPreview(): string
+    {
+        return $this->lessonType === 'rich_text'
+            ? $this->sanitiseRichText($this->lessonContent)
+            : nl2br(e($this->lessonContent));
     }
 
     public function moveLesson(int $id, string $direction): void
@@ -261,9 +344,10 @@ class CourseManage extends Component
             'attachModuleId' => 'nullable|integer',
             'attachLessonId' => 'nullable|integer',
             'materialDescription' => 'nullable|string|max:255',
-            'materialAudience' => 'required|in:course,group,student',
-            'materialGroupId' => 'required_if:materialAudience,group|nullable|integer',
-            'materialStudentId' => 'required_if:materialAudience,student|nullable|integer',
+            'materialAudience' => 'required_if:materialVisibility,enrolled|in:course,group,student',
+            'materialVisibility' => 'required|in:enrolled,trainers',
+            'materialGroupId' => $this->materialVisibility === 'enrolled' && $this->materialAudience === 'group' ? 'required|integer' : 'nullable',
+            'materialStudentId' => $this->materialVisibility === 'enrolled' && $this->materialAudience === 'student' ? 'required|integer' : 'nullable',
         ]);
 
         $attachable = $this->attachLessonId
@@ -276,16 +360,26 @@ class CourseManage extends Component
             $this->materialUpload,
             auth()->user(),
             $attachable,
-            'enrolled'
+            $this->materialVisibility
         );
         $material->forceFill([
             'description' => $this->materialDescription ?: null,
-            'group_id' => $this->materialAudience === 'group' ? $this->materialGroupId : null,
-            'student_id' => $this->materialAudience === 'student' ? $this->materialStudentId : null,
+            'group_id' => $this->materialVisibility === 'enrolled' && $this->materialAudience === 'group' ? $this->materialGroupId : null,
+            'student_id' => $this->materialVisibility === 'enrolled' && $this->materialAudience === 'student' ? $this->materialStudentId : null,
         ])->save();
 
-        $this->reset(['materialUpload', 'attachModuleId', 'attachLessonId', 'materialDescription', 'materialAudience', 'materialGroupId', 'materialStudentId']);
+        $this->reset(['materialUpload', 'attachModuleId', 'attachLessonId', 'materialDescription', 'materialAudience', 'materialVisibility', 'materialGroupId', 'materialStudentId']);
+        $this->materialAudience = 'course';
+        $this->materialVisibility = 'enrolled';
         session()->flash('saved', 'Material uploaded.');
+    }
+
+    public function updatedMaterialVisibility(): void
+    {
+        $this->materialAudience = 'course';
+        $this->materialGroupId = null;
+        $this->materialStudentId = null;
+        $this->resetValidation(['materialAudience', 'materialGroupId', 'materialStudentId']);
     }
 
     /** Rename = change display name/description, not the stored path. */
@@ -345,25 +439,31 @@ class CourseManage extends Component
             'students' => Enrolment::where('status', 'active')
                 ->whereHas('variant', fn ($q) => $q->where('course_id', $this->course->id))
                 ->with('user')->get()->pluck('user')->filter()->sortBy('name')->values(),
+            'uploadLimitLabel' => $this->uploadLimitLabel(),
         ])->layout('layouts::app', ['title' => 'Manage: '.$this->course->title]);
     }
 
-    private function resetLessonForm(bool $keepModule = false): void
+    private function resetModuleForm(): void
     {
-        $moduleId = $this->lessonModuleId;
+        $this->reset(['editingModuleId', 'moduleTitle', 'moduleSortOrder']);
+        $this->moduleStatus = 'draft';
+        $this->resetValidation(['moduleTitle', 'moduleStatus', 'moduleSortOrder']);
+    }
+
+    private function resetLessonForm(): void
+    {
         $this->reset([
-            'editingLessonId', 'lessonTitle', 'lessonContent', 'lessonType', 'lessonStatus',
-            'lessonRequired', 'completionThreshold', 'videoSource', 'videoId',
+            'editingLessonId', 'lessonTitle', 'lessonContent', 'showContentPreview', 'lessonType', 'lessonStatus',
+            'lessonRequired', 'requiresAcknowledgement', 'completionThreshold', 'videoSource', 'videoId',
             'videoDurationSeconds', 'lessonUpload', 'lessonModuleId',
         ]);
         $this->lessonType = 'text';
         $this->lessonStatus = 'draft';
         $this->lessonRequired = true;
+        $this->requiresAcknowledgement = true;
         $this->completionThreshold = 90;
         $this->videoSource = 'hosted';
-        if ($keepModule) {
-            $this->lessonModuleId = $moduleId;
-        }
+        $this->resetValidation();
     }
 
     private function sanitiseRichText(string $content): string
@@ -395,5 +495,28 @@ class CourseManage extends Component
             Storage::disk($material->disk)->delete($material->path);
             $material->delete();
         }
+    }
+
+    private function uploadLimitLabel(): string
+    {
+        $uploadBytes = $this->iniBytes((string) ini_get('upload_max_filesize'));
+        $postBytes = $this->iniBytes((string) ini_get('post_max_size'));
+        $effectiveBytes = min(array_filter([$uploadBytes, $postBytes]));
+
+        return $effectiveBytes >= 1024 * 1024
+            ? number_format($effectiveBytes / (1024 * 1024), 0).' MB'
+            : number_format($effectiveBytes / 1024, 0).' KB';
+    }
+
+    private function iniBytes(string $value): int
+    {
+        $number = (int) $value;
+
+        return match (strtolower(substr(trim($value), -1))) {
+            'g' => $number * 1024 * 1024 * 1024,
+            'm' => $number * 1024 * 1024,
+            'k' => $number * 1024,
+            default => $number,
+        };
     }
 }
