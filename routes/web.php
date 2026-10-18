@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\BridgeConsumeController;
 use App\Http\Controllers\Auth\BridgeEventsController;
+use App\Http\Controllers\Auth\BridgePackageController;
 use App\Http\Controllers\Auth\BridgeStartController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -73,6 +74,9 @@ Route::post('logout', [LoginController::class, 'destroy'])
     ->name('logout');
 
 // Joomla bridge SSO round-trip.
+Route::get('auth/bridge/package', BridgePackageController::class)
+    ->middleware('throttle:10,1')
+    ->name('bridge.package');
 Route::get('auth/bridge/start', BridgeStartController::class)
     ->middleware('throttle:10,1')
     ->name('bridge.start');

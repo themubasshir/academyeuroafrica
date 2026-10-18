@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\CourseVariant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -28,9 +29,22 @@ class BridgeStartController extends Controller
     {
         $state = hash('sha256', Str::random(40).$request->session()->getId());
         $request->session()->put('bridge_state', $state);
+        $request->session()->put('bridge_state_expires_at', now()->addMinutes(10)->timestamp);
+
+        $intent = $request->session()->get('bridge_intent');
+        if (is_array($intent) && ($intent['expires_at'] ?? 0) >= now()->timestamp) {
+            $variant = CourseVariant::with('course')->find((int) ($intent['variant_id'] ?? 0));
+            if ($variant?->isPurchasable()) {
+                $request->session()->put('url.intended', route('checkout.show', $variant));
+            } else {
+                $request->session()->forget(['bridge_intent', 'url.intended']);
+            }
+        } else {
+            $request->session()->forget(['bridge_intent', 'url.intended']);
+        }
 
         $target = $request->string('target')->toString();
-        if (array_key_exists($target, self::ALLOWED_TARGETS)) {
+        if (! $request->session()->has('url.intended') && array_key_exists($target, self::ALLOWED_TARGETS)) {
             $request->session()->put('url.intended', route(self::ALLOWED_TARGETS[$target]));
         }
 

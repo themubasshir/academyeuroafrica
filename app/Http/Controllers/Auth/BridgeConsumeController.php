@@ -35,7 +35,12 @@ class BridgeConsumeController extends Controller
             403,
             'Invalid bridge state.'
         );
-        $request->session()->forget('bridge_state');
+        abort_unless(
+            (int) $request->session()->get('bridge_state_expires_at', 0) >= now()->timestamp,
+            403,
+            'Expired bridge state.'
+        );
+        $request->session()->forget(['bridge_state', 'bridge_state_expires_at']);
 
         try {
             $user = $bridge->consumeCode((string) $request->string('code'));
@@ -56,6 +61,7 @@ class BridgeConsumeController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+        $request->session()->forget('bridge_intent');
 
         return redirect()->intended(match (true) {
             $user->isAdmin() => route('admin.dashboard'),
