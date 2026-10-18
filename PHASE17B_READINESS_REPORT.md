@@ -163,8 +163,8 @@ Added bridge feature coverage for:
 Results:
 
 ```text
-BridgeFlowTest: 14 passed, 30 assertions
-Full suite:     186 passed, 390 assertions
+BridgeFlowTest: 15 passed, 33 assertions
+Full suite:     187 passed, 393 assertions
 Pint:           passed
 Diff check:     passed
 ```
