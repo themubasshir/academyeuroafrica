@@ -47,7 +47,8 @@
                         <label for="password" class="label">Password</label>
                         <input id="password" name="password" type="password" required autocomplete="current-password" class="input">
                     </div>
-                    <div class="flex items-center justify-between">
+                    <div class="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                        <a href="{{ route('password.request') }}" class="text-sm text-reg-700 underline underline-offset-2">Forgot Password?</a>
                         <label for="remember" class="flex items-center gap-2 text-sm text-ink-600">
                             <input id="remember" name="remember" type="checkbox" class="h-4 w-4 rounded border-paper-300 text-reg-600 focus:ring-reg-600/40">
                             Remember me
@@ -55,7 +56,7 @@
                         <button type="submit" class="btn-secondary btn-sm">Sign in</button>
                     </div>
                 </form>
-                <div class="mt-4 flex justify-between text-sm"><a href="{{ route('password.request') }}" class="text-reg-700 underline">Forgot password?</a><a href="{{ route('register') }}" class="text-reg-700 underline">Create student account</a></div>
+                <div class="mt-4 text-right text-sm"><a href="{{ route('register') }}" class="text-reg-700 underline underline-offset-2">Create student account</a></div>
             </div>
 
             {{-- Registry footer line --}}
